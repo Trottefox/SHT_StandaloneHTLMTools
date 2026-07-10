@@ -1,4 +1,4 @@
-## SHT_StandaloneHTLMTools
+# SHT_StandaloneHTLMTools
 Repository of Standalone HTML tools that can be used deconnected, or made deployable on any URL (if stored on the server)
 The whole code is given in the HTML file and self sufficent, your browser is able to execute it without any internet connection.
 
