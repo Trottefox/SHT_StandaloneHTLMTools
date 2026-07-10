@@ -15,6 +15,7 @@ SHT_OCR_Image2text(light connects once) : A lighter version of the previous one,
 SHT_QR_code_generator : Easy to use and free QRcode generator
 SHT_QR_code_reader : A tool to identify a QR code on a photo and give the associated encoded text/URL
 
+SHT_Image_vectorizer : Converts an image in a vectorized format (easy to resize) - designed for scanned drawings
 
 
 
