@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OCR — Image to Text — Teacher Tool</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --border:#dde3e8; --accent:#2b6cb0; --text:#222;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); margin:0; padding:20px;}
+  h1{margin-top:0;}
+  .app{max-width:1100px; margin:0 auto;}
+  section{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:22px; box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  section h2{margin-top:0; font-size:1.15em; border-bottom:1px solid var(--border); padding-bottom:8px;}
+  label{display:block; font-weight:600; margin:10px 0 4px;}
+  textarea, select, input[type=text], input[type=file]{padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:0.95em; font-family:inherit;}
+  textarea{width:100%; min-height:220px; resize:vertical; font-family:Consolas, "Courier New", monospace; font-size:0.95em;}
+  .btn{cursor:pointer; border:none; border-radius:6px; padding:8px 14px; background:var(--accent); color:#fff; font-size:0.92em; margin:2px;}
+  .btn:hover{opacity:0.9;}
+  .btn.success{background:#2e7d32;}
+  .btn.secondary{background:#607d8b;}
+  .btn.danger{background:#c62828;}
+  .btn:disabled{background:#aab4bb; cursor:not-allowed;}
+  .row{display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;}
+  .field{min-width:180px;}
+  .field.grow{flex:1; min-width:260px;}
+  .hint{font-size:0.85em; color:#666; margin:4px 0 0;}
+  .warn{font-size:0.85em; color:#a15c00; margin:6px 0 0; background:#fff6e6; border:1px solid #f0d9a8; border-radius:6px; padding:6px 10px;}
+  .langGrid{display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:4px;}
+  .langGrid label{display:flex; align-items:center; gap:6px; font-weight:normal; margin:0;}
+  .langGrid input{width:15px; height:15px;}
+  .checkline{display:flex; align-items:center; gap:8px; font-weight:600; margin:10px 0 4px;}
+  .checkline input{width:16px; height:16px;}
+  #dropzone{border:2px dashed var(--border); border-radius:10px; padding:26px; text-align:center; color:#667; cursor:pointer; background:#fafbfc; transition:border-color .15s, background .15s;}
+  #dropzone.drag{border-color:var(--accent); background:#eef4fb;}
+  #dropzone p{margin:4px 0;}
+  #previewArea{display:none; margin-top:14px; text-align:center;}
+  #previewArea canvas{max-width:100%; max-height:420px; border:1px solid var(--border); border-radius:8px; background:repeating-conic-gradient(#e9edf1 0% 25%, #fff 0% 50%) 50% / 20px 20px;}
+  #progressWrap{display:none; margin-top:14px;}
+  #progressBarOuter{background:#e3e8ec; border-radius:8px; overflow:hidden; height:16px;}
+  #progressBarInner{background:var(--accent); height:100%; width:0%; transition:width .2s;}
+  #progressLabel{font-size:0.85em; color:#555; margin-top:6px;}
+  #errorMsg{color:#c62828; font-weight:600; margin-top:10px;}
+  .resultMeta{font-size:0.85em; color:#666; margin:8px 0;}
+  .actionsRow{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+  footer.credit{text-align:center; margin:26px 0 10px; opacity:0.9;}
+  footer.credit img{max-width:100%; height:auto;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🔎 OCR — Image to Text</h1>
+  <p class="hint">Load a photo or scan of a page, and get back editable, copyable text.</p>
+  <p class="warn">This tool runs OCR fully in your browser using the open-source Tesseract.js engine. The first time you use each language, your browser downloads that language's recognition data (a few MB) from a public CDN — this requires an internet connection once; after that it's cached and works offline. No image or text is ever sent to any server other than that one-time language-data download.</p>
+
+  <section id="imageSection">
+    <h2>1. Image</h2>
+    <div id="dropzone">
+      <p><strong>Click to choose an image</strong>, drag one here, or paste (Ctrl+V) a screenshot.</p>
+      <p class="hint">JPG, PNG, WEBP, BMP… Higher resolution and good contrast give better results.</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+    <div id="previewArea">
+      <canvas id="previewCanvas"></canvas>
+      <div class="actionsRow" style="justify-content:center;">
+        <button class="btn secondary" id="clearImageBtn">✖ Remove image</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="optionsSection">
+    <h2>2. Options</h2>
+    <label>Language(s) to recognize</label>
+    <div class="langGrid" id="langGrid">
+      <label><input type="checkbox" value="eng" checked> English</label>
+      <label><input type="checkbox" value="fra"> French</label>
+      <label><input type="checkbox" value="spa"> Spanish</label>
+      <label><input type="checkbox" value="deu"> German</label>
+      <label><input type="checkbox" value="ita"> Italian</label>
+      <label><input type="checkbox" value="por"> Portuguese</label>
+      <label><input type="checkbox" value="nld"> Dutch</label>
+    </div>
+    <div class="row" style="margin-top:8px;">
+      <div class="field grow">
+        <label for="customLang">Other language code(s) (optional)</label>
+        <input type="text" id="customLang" placeholder="e.g. ara, jpn, chi_sim — comma separated" style="width:100%;">
+        <p class="hint">Use <a href="https://github.com/naptha/tessdata/blob/gh-pages/README.md" target="_blank" rel="noopener">Tesseract language codes</a>. Combine with the checkboxes above if needed.</p>
+      </div>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="enhanceImg" checked>
+      <label for="enhanceImg" style="margin:0;">Enhance image before recognition (grayscale + contrast)</label>
+    </div>
+    <div class="checkline">
+      <input type="checkbox" id="upscaleImg">
+      <label for="upscaleImg" style="margin:0;">Upscale small images 2× (helps with low-resolution photos)</label>
+    </div>
+  </section>
+
+  <section id="runSection">
+    <h2>3. Extract text</h2>
+    <button class="btn" id="runBtn" disabled>▶️ Run OCR</button>
+    <div id="progressWrap">
+      <div id="progressBarOuter"><div id="progressBarInner"></div></div>
+      <div id="progressLabel"></div>
+    </div>
+    <div id="errorMsg"></div>
+  </section>
+
+  <section id="resultSection">
+    <h2>4. Result</h2>
+    <textarea id="resultText" placeholder="Recognized text will appear here — you can edit it freely."></textarea>
+    <div class="resultMeta"><span id="wordCount">0</span> words — <span id="charCount">0</span> characters</div>
+    <div class="actionsRow">
+      <button class="btn success" id="copyBtn">📋 Copy text</button>
+      <button class="btn secondary" id="downloadTxtBtn">⬇️ Download .txt</button>
+      <button class="btn danger" id="clearTextBtn">✖ Clear text</button>
+    </div>
+  </section>
+
+  <footer class="credit">
+    <img src="data:image/png;base64,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" alt="SHT - Standalone HTML Tools - Original source: https://github.com/Trottefox/SHT_StandaloneHTLMTools - https://creativecommons.org/licenses/by-nc/4.0/deed.fr">
+    <p class="hint">This tool is free to reuse and adapt but not for commercial use — please keep this credit if you build on it. Original source: <a href="https://github.com/Trottefox/SHT_StandaloneHTLMTools" target="_blank" rel="noopener">github.com/Trottefox/SHT_StandaloneHTLMTools - https://creativecommons.org/licenses/by-nc/4.0/deed.fr</a></p>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script>
+/* ============================= ELEMENTS ============================= */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const previewArea = document.getElementById('previewArea');
+const previewCanvas = document.getElementById('previewCanvas');
+const clearImageBtn = document.getElementById('clearImageBtn');
+const langGrid = document.getElementById('langGrid');
+const customLang = document.getElementById('customLang');
+const enhanceImg = document.getElementById('enhanceImg');
+const upscaleImg = document.getElementById('upscaleImg');
+const runBtn = document.getElementById('runBtn');
+const progressWrap = document.getElementById('progressWrap');
+const progressBarInner = document.getElementById('progressBarInner');
+const progressLabel = document.getElementById('progressLabel');
+const errorMsg = document.getElementById('errorMsg');
+const resultText = document.getElementById('resultText');
+const wordCount = document.getElementById('wordCount');
+const charCount = document.getElementById('charCount');
+const copyBtn = document.getElementById('copyBtn');
+const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+const clearTextBtn = document.getElementById('clearTextBtn');
+
+let sourceImage = null; // original loaded HTMLImageElement
+let worker = null;
+let workerLangs = null;
+
+/* ============================= IMAGE LOADING ============================= */
+dropzone.addEventListener('click', function(){ fileInput.click(); });
+dropzone.addEventListener('dragover', function(e){ e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', function(){ dropzone.classList.remove('drag'); });
+dropzone.addEventListener('drop', function(e){
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) loadImageFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', function(){
+  if(fileInput.files && fileInput.files[0]) loadImageFile(fileInput.files[0]);
+});
+document.addEventListener('paste', function(e){
+  const items = e.clipboardData && e.clipboardData.items;
+  if(!items) return;
+  for(let i = 0; i < items.length; i++){
+    if(items[i].type.indexOf('image') !== -1){
+      loadImageFile(items[i].getAsFile());
+      break;
+    }
+  }
+});
+
+function loadImageFile(file){
+  if(!file || file.type.indexOf('image') === -1){ return; }
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      sourceImage = img;
+      drawPreview();
+      previewArea.style.display = 'block';
+      runBtn.disabled = false;
+      errorMsg.textContent = '';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+clearImageBtn.addEventListener('click', function(){
+  sourceImage = null;
+  previewArea.style.display = 'none';
+  runBtn.disabled = true;
+  fileInput.value = '';
+});
+
+function drawPreview(){
+  if(!sourceImage) return;
+  previewCanvas.width = sourceImage.naturalWidth;
+  previewCanvas.height = sourceImage.naturalHeight;
+  const ctx = previewCanvas.getContext('2d');
+  ctx.drawImage(sourceImage, 0, 0);
+}
+
+/* ============================= PREPROCESSING ============================= */
+function buildProcessedCanvas(){
+  const scale = upscaleImg.checked ? 2 : 1;
+  const w = sourceImage.naturalWidth * scale;
+  const h = sourceImage.naturalHeight * scale;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(sourceImage, 0, 0, w, h);
+
+  if(enhanceImg.checked){
+    const imgData = ctx.getImageData(0, 0, w, h);
+    const d = imgData.data;
+    const contrast = 40; // fixed, moderate boost
+    const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+    for(let i = 0; i < d.length; i += 4){
+      const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+      const adjusted = factor * (gray - 128) + 128;
+      const v = Math.max(0, Math.min(255, adjusted));
+      d[i] = d[i+1] = d[i+2] = v;
+    }
+    ctx.putImageData(imgData, 0, 0);
+  }
+  return canvas;
+}
+
+/* ============================= LANGUAGE SELECTION ============================= */
+function getSelectedLangs(){
+  const checked = Array.from(langGrid.querySelectorAll('input:checked')).map(function(cb){ return cb.value; });
+  const custom = customLang.value.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+  const all = checked.concat(custom);
+  return all.length ? Array.from(new Set(all)).join('+') : 'eng';
+}
+
+/* ============================= OCR ============================= */
+async function getWorker(langsStr){
+  if(worker && workerLangs === langsStr) return worker;
+  if(worker){ await worker.terminate(); worker = null; }
+  worker = await Tesseract.createWorker(langsStr, 1, {
+    logger: function(m){ updateProgress(m); }
+  });
+  workerLangs = langsStr;
+  return worker;
+}
+
+function updateProgress(m){
+  progressWrap.style.display = 'block';
+  const pct = Math.round((m.progress || 0) * 100);
+  progressBarInner.style.width = pct + '%';
+  const labels = {
+    'loading tesseract core': 'Loading OCR engine…',
+    'initializing tesseract': 'Initializing…',
+    'loading language traineddata': 'Downloading language data…',
+    'initializing api': 'Preparing…',
+    'recognizing text': 'Reading text…'
+  };
+  progressLabel.textContent = (labels[m.status] || m.status) + ' (' + pct + '%)';
+}
+
+runBtn.addEventListener('click', async function(){
+  if(!sourceImage) return;
+  errorMsg.textContent = '';
+  runBtn.disabled = true;
+  progressWrap.style.display = 'block';
+  progressBarInner.style.width = '0%';
+  progressLabel.textContent = 'Starting…';
+
+  try{
+    const langsStr = getSelectedLangs();
+    const w = await getWorker(langsStr);
+    const canvas = buildProcessedCanvas();
+    const { data } = await w.recognize(canvas);
+    resultText.value = data.text.trim();
+    updateCounts();
+  } catch(err){
+    console.error(err);
+    errorMsg.textContent = 'OCR failed: ' + (err && err.message ? err.message : 'unknown error') + '. Check your internet connection (needed to fetch the OCR engine/language data) and try again.';
+  } finally {
+    runBtn.disabled = false;
+    progressLabel.textContent = 'Done.';
+  }
+});
+
+/* ============================= RESULT ACTIONS ============================= */
+function updateCounts(){
+  const text = resultText.value;
+  charCount.textContent = text.length;
+  const words = text.trim().length ? text.trim().split(/\s+/).length : 0;
+  wordCount.textContent = words;
+}
+resultText.addEventListener('input', updateCounts);
+
+copyBtn.addEventListener('click', async function(){
+  try{
+    await navigator.clipboard.writeText(resultText.value);
+    copyBtn.textContent = '✅ Copied!';
+    setTimeout(function(){ copyBtn.textContent = '📋 Copy text'; }, 1500);
+  } catch(err){
+    resultText.select();
+    document.execCommand('copy');
+  }
+});
+
+downloadTxtBtn.addEventListener('click', function(){
+  const blob = new Blob([resultText.value], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'ocr-text.txt';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+});
+
+clearTextBtn.addEventListener('click', function(){
+  resultText.value = '';
+  updateCounts();
+});
+
+updateCounts();
+</script>
+</body>
+</html>
