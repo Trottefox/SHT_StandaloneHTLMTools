@@ -33,3 +33,5 @@ Generate a wordcloud from text
 Various PDF manipulations, 
 merge, split, organize, rotate, compress, transform to word, edit, sign, watermark, unlock, protect, OCRize
 
+# SHT_Anamorphic_Image_Projector
+Projects an image to make it seen from a certain angle (for 3D effect)
