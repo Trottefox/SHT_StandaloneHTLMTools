@@ -23,5 +23,13 @@ A tool to identify a QR code on a photo and give the associated encoded text/URL
 # SHT_Image_vectorizer : 
 Converts an image in a vectorized format (easy to resize) - designed for scanned drawings
 
+# SHT_ASCII_Art_Generator
+Converts an image into a ASCII art
 
+# SHT_Word_Cloud_Generator
+Generate a wordcloud from text
+
+# SHT_PDF_Toolkit
+Various PDF manipulations, 
+merge, split, organize, rotate, compress, transform to word, edit, sign, watermark, unlock, protect, OCRize
 
