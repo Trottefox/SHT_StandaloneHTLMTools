@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ASCII Art Generator — Teacher Tool</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --border:#dde3e8; --accent:#2b6cb0; --text:#222;
+  }
+  *{box-sizing:border-box;}
+  body{font-family:Segoe UI, Arial, sans-serif; background:var(--bg); color:var(--text); margin:0; padding:20px;}
+  h1{margin-top:0;}
+  .app{max-width:1150px; margin:0 auto;}
+  section{background:var(--card); border:1px solid var(--border); border-radius:10px; padding:18px 20px; margin-bottom:22px; box-shadow:0 1px 3px rgba(0,0,0,0.04);}
+  section h2{margin-top:0; font-size:1.15em; border-bottom:1px solid var(--border); padding-bottom:8px;}
+  label{display:block; font-weight:600; margin:10px 0 4px;}
+  select, input[type=text], input[type=number], input[type=file]{padding:6px 8px; border:1px solid var(--border); border-radius:6px; font-size:0.92em; font-family:inherit; box-sizing:border-box;}
+  select{width:100%; max-width:100%;}
+  input[type=color]{width:52px; height:34px; padding:2px; border:1px solid var(--border); border-radius:6px; cursor:pointer; background:#fff;}
+  input[type=range]{vertical-align:middle; width:100%;}
+  .btn{cursor:pointer; border:none; border-radius:6px; padding:9px 16px; background:var(--accent); color:#fff; font-size:0.95em; margin:2px;}
+  .btn:hover{opacity:0.9;}
+  .btn.success{background:#2e7d32;}
+  .btn.secondary{background:#607d8b;}
+  .btn.outline{background:#fff; color:var(--accent); border:1px solid var(--accent);}
+  .btn:disabled{background:#aab4bb; color:#fff; border-color:#aab4bb; cursor:not-allowed;}
+  .row{display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start;}
+  .field{min-width:200px; flex:1;}
+  .inline{display:flex; align-items:center; gap:8px;}
+  .hint{font-size:0.85em; color:#666; margin:4px 0 0;}
+  .warn{font-size:0.85em; color:#a15c00; margin:6px 0 0; background:#fff6e6; border:1px solid #f0d9a8; border-radius:6px; padding:6px 10px;}
+  .checkline{display:flex; align-items:center; gap:8px; font-weight:600; margin:10px 0 4px;}
+  .checkline input{width:16px; height:16px;}
+  .checkline label{margin:0; font-weight:normal;}
+  .sliderRow{display:flex; align-items:center; gap:10px;}
+  .sliderRow output{min-width:46px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600;}
+  .dropzone{border:2px dashed var(--border); border-radius:10px; padding:16px; text-align:center; cursor:pointer; transition:border-color .15s, background .15s;}
+  .dropzone:hover, .dropzone.dragover{border-color:var(--accent); background:#eef4fa;}
+  .dropzone p{margin:6px 0 0; color:#555; font-size:0.88em;}
+  input[type=file]{display:block; margin:0 auto;}
+  #thumbWrap{display:none; margin-top:14px; text-align:center;}
+  #originalCanvas{max-width:220px; max-height:220px; border:1px solid var(--border); border-radius:8px; background:repeating-conic-gradient(#e9edf1 0% 25%, #fff 0% 50%) 50% / 14px 14px;}
+  #originalInfo{display:block; font-size:0.85em; color:#666; margin-top:6px;}
+  #previewOuter{border:1px solid var(--border); border-radius:8px; overflow:auto; max-height:640px; padding:10px;}
+  #previewPre{margin:0; white-space:pre; display:inline-block; min-width:100%;}
+  #statusMsg{font-size:0.9em; color:#2b6cb0; min-height:1.2em;}
+  #errorMsg{color:#c62828; font-weight:600; margin-top:8px; min-height:1.2em; text-align:center;}
+  .downloadRow{display:flex; gap:8px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:12px;}
+  footer.credit{text-align:center; margin:26px 0 10px; opacity:0.9;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🔤 ASCII Art Generator</h1>
+  <p class="hint">Upload a JPG or PNG and turn it into ASCII art, colored to match the original image, exported as ready-to-use HTML. Preview it live before saving.</p>
+
+  <section id="imageSection">
+    <h2>1. Image</h2>
+    <div class="dropzone" id="dropzone">
+      <div>📁 Click to choose an image, or drag one here</div>
+      <p>JPG or PNG — photos, portraits and logos all work.</p>
+      <input type="file" id="fileInput" accept="image/png, image/jpeg">
+    </div>
+    <div id="thumbWrap">
+      <canvas id="originalCanvas"></canvas>
+      <span id="originalInfo"></span>
+    </div>
+  </section>
+
+  <section id="settingsSection">
+    <h2>2. ASCII settings</h2>
+    <div class="row">
+      <div class="field">
+        <label for="colsInput">Output width (characters)</label>
+        <div class="sliderRow">
+          <input type="range" id="colsInput" min="20" max="300" value="100" step="5">
+          <output id="colsVal">100</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="aspectInput">Character aspect correction</label>
+        <div class="sliderRow">
+          <input type="range" id="aspectInput" min="0.3" max="1" value="0.55" step="0.05">
+          <output id="aspectVal">0.55</output>
+        </div>
+        <p class="hint">Compensates for characters being taller than they are wide.</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="charsetSelect">Character set</label>
+        <select id="charsetSelect">
+          <option value="standard" selected>Standard (@%#*+=-:. )</option>
+          <option value="detailed">Detailed (70 levels)</option>
+          <option value="blocks">Blocks (█▓▒░)</option>
+          <option value="binary">Binary (1 0)</option>
+          <option value="custom">Custom…</option>
+        </select>
+        <input type="text" id="customRamp" placeholder="@%#*+=-:. " style="display:none; margin-top:6px; width:100%;">
+        <p class="hint">Order from darkest/densest (left) to lightest (right).</p>
+      </div>
+      <div class="field checkline" style="margin-top:26px;">
+        <input type="checkbox" id="invertMap">
+        <label for="invertMap">Invert brightness mapping</label>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="brightnessInput">Brightness</label>
+        <div class="sliderRow">
+          <input type="range" id="brightnessInput" min="-100" max="100" value="0">
+          <output id="brightnessVal">0</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="contrastInput">Contrast</label>
+        <div class="sliderRow">
+          <input type="range" id="contrastInput" min="-100" max="100" value="0">
+          <output id="contrastVal">0</output>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="styleSection">
+    <h2>3. Color &amp; style</h2>
+    <div class="row">
+      <div class="field">
+        <label for="colorModeSelect">Coloring</label>
+        <select id="colorModeSelect">
+          <option value="full" selected>Full color (matches image)</option>
+          <option value="grayscale">Grayscale</option>
+          <option value="sepia">Sepia</option>
+          <option value="mono">Single color</option>
+        </select>
+      </div>
+      <div class="field" id="monoColorField" style="display:none;">
+        <label for="monoColor">Text color</label>
+        <input type="color" id="monoColor" value="#33ff66">
+      </div>
+      <div class="field">
+        <label for="bgColor">Background</label>
+        <div class="inline">
+          <input type="color" id="bgColor" value="#000000">
+          <span class="checkline" style="margin:0;">
+            <input type="checkbox" id="transparentBg">
+            <label for="transparentBg">Transparent</label>
+          </span>
+        </div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="fontFamilySelect">Font</label>
+        <select id="fontFamilySelect">
+          <option value="'Courier New', monospace" selected>Courier New</option>
+          <option value="Consolas, monospace">Consolas</option>
+          <option value="Menlo, monospace">Menlo</option>
+          <option value="'Lucida Console', monospace">Lucida Console</option>
+          <option value="monospace">Generic monospace</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="fontSizeInput">Font size (px)</label>
+        <div class="sliderRow">
+          <input type="range" id="fontSizeInput" min="4" max="20" value="7">
+          <output id="fontSizeVal">7</output>
+        </div>
+      </div>
+      <div class="field checkline" style="margin-top:26px;">
+        <input type="checkbox" id="boldText">
+        <label for="boldText">Bold text</label>
+      </div>
+    </div>
+  </section>
+
+  <section id="previewSection">
+    <h2>4. Preview &amp; download</h2>
+    <div class="downloadRow">
+      <button class="btn" id="generateBtn" disabled>✨ Generate ASCII art</button>
+      <span id="statusMsg"></span>
+    </div>
+    <div id="previewOuter">
+      <pre id="previewPre">Upload an image and click Generate to see a preview here.</pre>
+    </div>
+    <div id="errorMsg"></div>
+    <div class="downloadRow">
+      <button class="btn success" id="downloadHtmlBtn" disabled>⬇️ Download HTML</button>
+      <button class="btn secondary" id="downloadTxtBtn" disabled>⬇️ Download TXT (plain)</button>
+      <button class="btn secondary" id="downloadPngBtn" disabled>⬇️ Download PNG</button>
+      <button class="btn outline" id="copyHtmlBtn" disabled>📋 Copy HTML</button>
+    </div>
+    <p class="hint" style="text-align:center;">The HTML download is a standalone page with the colored ASCII art already styled and ready to open or embed.</p>
+  </section>
+
+  <footer class="credit">
+    <p class="hint">Pure client-side conversion — nothing is uploaded anywhere; the whole tool runs in this single HTML file.</p>
+  </footer>
+</div>
+<script>
+/* ============================= DOM refs ============================= */
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const thumbWrap = document.getElementById('thumbWrap');
+const originalCanvas = document.getElementById('originalCanvas');
+const originalInfo = document.getElementById('originalInfo');
+
+const colsInput = document.getElementById('colsInput');
+const colsVal = document.getElementById('colsVal');
+const aspectInput = document.getElementById('aspectInput');
+const aspectVal = document.getElementById('aspectVal');
+const charsetSelect = document.getElementById('charsetSelect');
+const customRamp = document.getElementById('customRamp');
+const invertMap = document.getElementById('invertMap');
+const brightnessInput = document.getElementById('brightnessInput');
+const brightnessVal = document.getElementById('brightnessVal');
+const contrastInput = document.getElementById('contrastInput');
+const contrastVal = document.getElementById('contrastVal');
+
+const colorModeSelect = document.getElementById('colorModeSelect');
+const monoColorField = document.getElementById('monoColorField');
+const monoColor = document.getElementById('monoColor');
+const bgColor = document.getElementById('bgColor');
+const transparentBg = document.getElementById('transparentBg');
+const fontFamilySelect = document.getElementById('fontFamilySelect');
+const fontSizeInput = document.getElementById('fontSizeInput');
+const fontSizeVal = document.getElementById('fontSizeVal');
+const boldText = document.getElementById('boldText');
+
+const generateBtn = document.getElementById('generateBtn');
+const statusMsg = document.getElementById('statusMsg');
+const previewPre = document.getElementById('previewPre');
+const errorMsg = document.getElementById('errorMsg');
+const downloadHtmlBtn = document.getElementById('downloadHtmlBtn');
+const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+const downloadPngBtn = document.getElementById('downloadPngBtn');
+const copyHtmlBtn = document.getElementById('copyHtmlBtn');
+
+let originalImage = null;
+let lastRowsData = null;
+let lastCols = 0, lastRows = 0;
+let lastInnerHtml = '';
+
+/* ============================= slider live values ============================= */
+colsInput.addEventListener('input', () => colsVal.textContent = colsInput.value);
+aspectInput.addEventListener('input', () => aspectVal.textContent = aspectInput.value);
+brightnessInput.addEventListener('input', () => brightnessVal.textContent = brightnessInput.value);
+contrastInput.addEventListener('input', () => contrastVal.textContent = contrastInput.value);
+fontSizeInput.addEventListener('input', () => { fontSizeVal.textContent = fontSizeInput.value; applyPreviewStyle(); });
+
+/* ============================= conditional fields ============================= */
+charsetSelect.addEventListener('change', () => {
+  customRamp.style.display = charsetSelect.value === 'custom' ? 'block' : 'none';
+});
+colorModeSelect.addEventListener('change', () => {
+  monoColorField.style.display = colorModeSelect.value === 'mono' ? 'block' : 'none';
+});
+
+/* ============================= live style controls (no recompute needed) ============================= */
+fontFamilySelect.addEventListener('change', applyPreviewStyle);
+boldText.addEventListener('change', applyPreviewStyle);
+bgColor.addEventListener('input', applyPreviewStyle);
+transparentBg.addEventListener('change', applyPreviewStyle);
+
+function applyPreviewStyle() {
+  previewPre.style.fontFamily = fontFamilySelect.value;
+  previewPre.style.fontSize = fontSizeInput.value + 'px';
+  previewPre.style.fontWeight = boldText.checked ? 'bold' : 'normal';
+  previewPre.style.lineHeight = '1';
+  previewPre.style.letterSpacing = '0';
+  document.getElementById('previewOuter').style.background = transparentBg.checked
+    ? 'repeating-conic-gradient(#e9edf1 0% 25%, #fff 0% 50%) 50% / 16px 16px'
+    : bgColor.value;
+}
+applyPreviewStyle();
+
+/* ============================= file loading ============================= */
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('dragover');
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files && fileInput.files[0]) loadFile(fileInput.files[0]);
+});
+
+function loadFile(file) {
+  if (!/^image\/(png|jpeg|jpg)$/.test(file.type)) {
+    errorMsg.textContent = 'Please choose a JPG or PNG image.';
+    return;
+  }
+  errorMsg.textContent = '';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const img = new Image();
+    img.onload = () => {
+      originalImage = img;
+      thumbWrap.style.display = 'block';
+      const maxSide = 220;
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      originalCanvas.width = w;
+      originalCanvas.height = h;
+      originalCanvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      originalInfo.textContent = 'Original — ' + img.width + ' × ' + img.height + ' px';
+      generateBtn.disabled = false;
+      statusMsg.textContent = 'Image loaded — adjust settings, then click Generate.';
+      resetOutputs();
+    };
+    img.onerror = () => { errorMsg.textContent = 'Could not load that image file.'; };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetOutputs() {
+  lastRowsData = null;
+  lastInnerHtml = '';
+  previewPre.textContent = 'Click Generate to see a preview here.';
+  downloadHtmlBtn.disabled = true;
+  downloadTxtBtn.disabled = true;
+  downloadPngBtn.disabled = true;
+  copyHtmlBtn.disabled = true;
+}
+
+/* ============================= character ramps ============================= */
+function buildRamp() {
+  const preset = charsetSelect.value;
+  if (preset === 'standard') return '@%#*+=-:. ';
+  if (preset === 'detailed') return '$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,"^`\'. ';
+  if (preset === 'blocks') return '\u2588\u2593\u2592\u2591 ';
+  if (preset === 'binary') return '10';
+  return customRamp.value || ' .:-=+*#%@'.split('').reverse().join('');
+}
+
+function clampByte(v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+
+/* ============================= core processing ============================= */
+function processImage() {
+  const cols = Math.max(10, Math.min(300, parseInt(colsInput.value, 10) || 100));
+  const aspect = parseFloat(aspectInput.value) || 0.55;
+  const rows = Math.max(1, Math.round(cols * (originalImage.height / originalImage.width) * aspect));
+
+  const off = document.createElement('canvas');
+  off.width = cols;
+  off.height = rows;
+  const octx = off.getContext('2d');
+  octx.imageSmoothingEnabled = true;
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(originalImage, 0, 0, cols, rows);
+  const data = octx.getImageData(0, 0, cols, rows).data;
+
+  const ramp = buildRamp();
+  const invert = invertMap.checked;
+  const brightness = parseInt(brightnessInput.value, 10) || 0;
+  const contrastSlider = (parseInt(contrastInput.value, 10) || 0) * 2.55;
+  const contrastFactor = (259 * (contrastSlider + 255)) / (255 * (259 - contrastSlider));
+  const colorMode = colorModeSelect.value;
+  const monoRgb = hexToRgb(monoColor.value);
+
+  const rowsData = [];
+  for (let y = 0; y < rows; y++) {
+    const cellsRow = [];
+    for (let x = 0; x < cols; x++) {
+      const idx = (y * cols + x) * 4;
+      let r = clampByte(Math.round(contrastFactor * (data[idx] - 128) + 128 + brightness));
+      let g = clampByte(Math.round(contrastFactor * (data[idx + 1] - 128) + 128 + brightness));
+      let b = clampByte(Math.round(contrastFactor * (data[idx + 2] - 128) + 128 + brightness));
+
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      let norm = lum / 255;
+      if (invert) norm = 1 - norm;
+      const charIdx = Math.min(ramp.length - 1, Math.max(0, Math.round(norm * (ramp.length - 1))));
+      const ch = ramp[charIdx];
+
+      let color;
+      if (colorMode === 'grayscale') {
+        const l = Math.round(lum);
+        color = [l, l, l];
+      } else if (colorMode === 'sepia') {
+        const sr = Math.min(255, 0.393 * r + 0.769 * g + 0.189 * b);
+        const sg = Math.min(255, 0.349 * r + 0.686 * g + 0.168 * b);
+        const sb = Math.min(255, 0.272 * r + 0.534 * g + 0.131 * b);
+        color = [Math.round(sr), Math.round(sg), Math.round(sb)];
+      } else if (colorMode === 'mono') {
+        color = monoRgb;
+      } else {
+        color = [r, g, b];
+      }
+      cellsRow.push({ ch: ch, color: color });
+    }
+    rowsData.push(cellsRow);
+  }
+  return { rowsData: rowsData, cols: cols, rows: rows };
+}
+
+function hexToRgb(hex) {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [255, 255, 255];
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* ----- build colored HTML (run-length encoded spans per row) ----- */
+function buildColoredHtml(rowsData) {
+  let html = '';
+  rowsData.forEach((row) => {
+    let line = '';
+    let i = 0;
+    while (i < row.length) {
+      const c = row[i].color;
+      let chars = row[i].ch;
+      let j = i + 1;
+      while (j < row.length && row[j].color[0] === c[0] && row[j].color[1] === c[1] && row[j].color[2] === c[2]) {
+        chars += row[j].ch;
+        j++;
+      }
+      line += '<span style="color:rgb(' + c[0] + ',' + c[1] + ',' + c[2] + ')">' + escapeHtml(chars) + '</span>';
+      i = j;
+    }
+    html += line + '\n';
+  });
+  return html;
+}
+
+function buildPlainText(rowsData) {
+  return rowsData.map((row) => row.map((cell) => cell.ch).join('')).join('\n');
+}
+
+/* ============================= generate action ============================= */
+generateBtn.addEventListener('click', () => {
+  if (!originalImage) {
+    errorMsg.textContent = 'Please choose an image first.';
+    return;
+  }
+  errorMsg.textContent = '';
+  statusMsg.textContent = 'Processing…';
+  generateBtn.disabled = true;
+
+  setTimeout(() => {
+    try {
+      const result = processImage();
+      lastRowsData = result.rowsData;
+      lastCols = result.cols;
+      lastRows = result.rows;
+      lastInnerHtml = buildColoredHtml(result.rowsData);
+
+      previewPre.innerHTML = lastInnerHtml;
+      applyPreviewStyle();
+
+      statusMsg.textContent = result.cols + ' × ' + result.rows + ' characters.';
+      downloadHtmlBtn.disabled = false;
+      downloadTxtBtn.disabled = false;
+      downloadPngBtn.disabled = false;
+      copyHtmlBtn.disabled = false;
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = '';
+      errorMsg.textContent = 'Something went wrong (' + err.message + '). Try a smaller output width.';
+    } finally {
+      generateBtn.disabled = false;
+    }
+  }, 20);
+});
+
+/* ============================= downloads ============================= */
+function currentStyleBlock() {
+  const bg = transparentBg.checked ? 'transparent' : bgColor.value;
+  const fw = boldText.checked ? 'bold' : 'normal';
+  return 'background:' + bg + '; font-family:' + fontFamilySelect.value + '; font-size:' + fontSizeInput.value
+    + 'px; font-weight:' + fw + '; line-height:1; letter-spacing:0; white-space:pre; margin:0; display:inline-block;';
+}
+
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+downloadHtmlBtn.addEventListener('click', () => {
+  if (!lastInnerHtml) return;
+  const bodyBg = transparentBg.checked ? '#ffffff' : bgColor.value;
+  const doc = '<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<title>ASCII Art</title>\n'
+    + '<style>\n  html,body{margin:0; padding:0; background:' + bodyBg + ';}\n'
+    + '  pre.ascii-art{' + currentStyleBlock() + ' padding:20px;}\n</style>\n</head>\n<body>\n'
+    + '<pre class="ascii-art">' + lastInnerHtml + '</pre>\n</body>\n</html>\n';
+  downloadBlob(doc, 'ascii-art.html', 'text/html');
+});
+
+downloadTxtBtn.addEventListener('click', () => {
+  if (!lastRowsData) return;
+  downloadBlob(buildPlainText(lastRowsData), 'ascii-art.txt', 'text/plain');
+});
+
+copyHtmlBtn.addEventListener('click', () => {
+  if (!lastInnerHtml) return;
+  const snippet = '<pre class="ascii-art" style="' + currentStyleBlock() + '">' + lastInnerHtml + '</pre>';
+  navigator.clipboard.writeText(snippet).then(() => {
+    statusMsg.textContent = 'HTML copied to clipboard.';
+  }).catch(() => {
+    errorMsg.textContent = 'Could not copy automatically — please select and copy the preview manually.';
+  });
+});
+
+downloadPngBtn.addEventListener('click', () => {
+  if (!lastRowsData) return;
+  const fontSize = parseInt(fontSizeInput.value, 10) || 7;
+  const fam = fontFamilySelect.value;
+  const weight = boldText.checked ? 'bold ' : '';
+
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+  mctx.font = weight + fontSize + 'px ' + fam;
+  const cellW = mctx.measureText('M').width;
+  const cellH = Math.round(fontSize * 1.0);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(cellW * lastCols);
+  canvas.height = cellH * lastRows;
+  const ctx = canvas.getContext('2d');
+
+  if (!transparentBg.checked) {
+    ctx.fillStyle = bgColor.value;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  ctx.font = weight + fontSize + 'px ' + fam;
+  ctx.textBaseline = 'top';
+  for (let y = 0; y < lastRows; y++) {
+    const row = lastRowsData[y];
+    for (let x = 0; x < row.length; x++) {
+      const cell = row[x];
+      if (cell.ch === ' ') continue;
+      ctx.fillStyle = 'rgb(' + cell.color[0] + ',' + cell.color[1] + ',' + cell.color[2] + ')';
+      ctx.fillText(cell.ch, x * cellW, y * cellH);
+    }
+  }
+
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'ascii-art.png';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+});
+</script>
+</body>
+</html>
