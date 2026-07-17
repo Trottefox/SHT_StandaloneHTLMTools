@@ -115,13 +115,16 @@
   <button class="navBtn" data-tool="organize"><span class="navIcon">🗂️</span> Organize PDF</button>
   <button class="navBtn" data-tool="rotate"><span class="navIcon">🔄</span> Rotate PDF</button>
   <button class="navBtn" data-tool="compress"><span class="navIcon">🗜️</span> Compress PDF</button>
-  <button class="navBtn" data-tool="towords"><span class="navIcon">📝</span> PDF to Word</button>
+  <button class="navBtn" data-tool="towords"><span class="navIcon">📝</span> Extract Text (PDF→TXT)</button>
   <button class="navBtn" data-tool="edit"><span class="navIcon">✏️</span> Edit PDF</button>
   <button class="navBtn" data-tool="sign"><span class="navIcon">✒️</span> Sign PDF</button>
   <button class="navBtn" data-tool="watermark"><span class="navIcon">💧</span> Watermark</button>
   <button class="navBtn" data-tool="unlock"><span class="navIcon">🔓</span> Unlock PDF</button>
   <button class="navBtn" data-tool="protect"><span class="navIcon">🔒</span> Protect PDF</button>
+  <button class="navBtn" data-tool="metadata"><span class="navIcon">🧹</span> Remove Metadata</button>
   <button class="navBtn" data-tool="ocr"><span class="navIcon">🔍</span> OCR PDF</button>
+  <!--<button class="navBtn" data-tool="authenticate"><span class="navIcon">🔏</span> Authenticate PDF</button>
+  <button class="navBtn" data-tool="authentify"><span class="navIcon">🕵️</span> Authentify PDF</button>-->
 </nav>
 
 <main id="main">
@@ -283,10 +286,23 @@
       <div class="field">
         <label for="compress-mode">Method</label>
         <select id="compress-mode">
-          <option value="optimize" selected>Quick optimize (keeps text selectable, modest savings)</option>
-          <option value="rasterize">Rasterize pages (biggest savings, but pages become images)</option>
+          <option value="smart" selected>Smart compress (recompress images only, default)</option>
+          <option value="optimize">Quick optimize (keeps text selectable, modest savings)</option>
+          <option value="rasterize">Rasterize all pages (biggest savings, but every page becomes an image)</option>
         </select>
       </div>
+    </div>
+    <div id="compress-qualityOnlyOptions" style="display:none;">
+      <div class="row">
+        <div class="field">
+          <label for="compress-quality">JPEG quality</label>
+          <div class="sliderRow">
+            <input type="range" id="compress-quality" min="10" max="95" value="60" step="5">
+            <output id="compress-qualityVal">60</output>
+          </div>
+        </div>
+      </div>
+      <p class="hint">On pages with selectable text, only the embedded photos/images are recompressed at this quality — the text itself is left untouched and stays sharp and selectable. A page with no selectable text (e.g. a scanned page) is compressed as a single image instead, since there's no text to preserve.</p>
     </div>
     <div id="compress-rasterOptions" style="display:none;">
       <div class="row">
@@ -298,10 +314,10 @@
           </div>
         </div>
         <div class="field">
-          <label for="compress-quality">JPEG quality</label>
+          <label for="compress-rasterQuality">JPEG quality</label>
           <div class="sliderRow">
-            <input type="range" id="compress-quality" min="10" max="95" value="60" step="5">
-            <output id="compress-qualityVal">60</output>
+            <input type="range" id="compress-rasterQuality" min="10" max="95" value="60" step="5">
+            <output id="compress-rasterQualityVal">60</output>
           </div>
         </div>
       </div>
@@ -321,9 +337,9 @@
 </div>
 
 <div class="toolPanel" id="panel-towords">
-  <h1>📝 PDF to Word</h1>
-  <p class="subtitle">Extract the text from a PDF into an editable Word (.docx) document.</p>
-  <div class="note">This pulls out the text and rebuilds it as paragraphs in a Word document — it does not recreate complex layouts, tables, columns or images pixel-for-pixel. For simple text documents it works well; for heavily designed pages, expect to do some reformatting afterwards.</div>
+  <h1>📝 Extract Text from PDF</h1>
+  <p class="subtitle">Pull the text out of a PDF into a plain .txt file.</p>
+  <div class="note">This tool used to offer a "PDF to Word" conversion, but a real Word export needs to reinsert images and rebuild layout/formatting, which a plain text extraction can't honestly do. Rather than hand you a .docx that looks like a Word document but has lost all of that, this tool is named for what it actually does: pull out the text as plain .txt. If you need a real, formatted Word document, open the PDF in Word/LibreOffice directly, or use the Edit PDF tool for annotations.</div>
 
   <section>
     <h3>1. Upload a PDF</h3>
@@ -338,14 +354,14 @@
     <h3>2. Options</h3>
     <div class="checkline">
       <input type="checkbox" id="towords-pageBreaks" checked>
-      <label for="towords-pageBreaks">Insert a page break between PDF pages</label>
+      <label for="towords-pageBreaks">Insert a marker line between PDF pages</label>
     </div>
   </section>
 
   <section id="towords-goSection" style="display:none;">
-    <h3>3. Convert &amp; download</h3>
+    <h3>3. Extract &amp; download</h3>
     <div class="downloadRow">
-      <button class="btn" id="towords-goBtn">📝 Convert to Word</button>
+      <button class="btn" id="towords-goBtn">📝 Extract text (.txt)</button>
       <span class="statusMsg" id="towords-status"></span>
     </div>
     <div class="errorMsg" id="towords-error"></div>
@@ -441,7 +457,7 @@
 
 <div class="toolPanel" id="panel-sign">
   <h1>✒️ Sign PDF</h1>
-  <p class="subtitle">Create your signature and place it on the page. (This adds your own signature — collecting signatures from other people would need an online service, which is outside what a standalone offline file can do.)</p>
+  <p class="subtitle">Create a signature and/or paraph, place them on the page(s), and optionally embed a hidden text signature. (This adds your own signature — collecting signatures from other people would need an online service, which is outside what a standalone offline file can do.)</p>
 
   <section>
     <h3>1. Upload a PDF</h3>
@@ -453,61 +469,113 @@
   </section>
 
   <section id="sign-createSection" style="display:none;">
-    <h3>2. Create your signature</h3>
-    <div class="row">
-      <button class="btn small secondary" data-smode="draw" id="sign-mode-draw">✏️ Draw</button>
-      <button class="btn small secondary" data-smode="type" id="sign-mode-type">⌨️ Type</button>
-      <button class="btn small secondary" data-smode="upload" id="sign-mode-upload">📁 Upload</button>
-    </div>
-
-    <div id="sign-drawArea">
-      <canvas id="sign-drawCanvas" width="500" height="160" style="border:1px solid var(--border); border-radius:6px; background:#fff; touch-action:none; cursor:crosshair;"></canvas>
-      <div class="row" style="margin-top:6px;">
-        <div class="field" style="flex:none;">
-          <label for="sign-drawColor">Ink color</label>
-          <input type="color" id="sign-drawColor" value="#123a7a">
+    <h3>2. Create your signature &amp; paraph</h3>
+    <p class="hint">A signature is placed wherever you click. A paraph (initials) can be repeated automatically on a range of pages, like a watermark.</p>
+    <div class="row" style="align-items:flex-start;">
+      <div class="field" style="min-width:320px;">
+        <h4 style="margin:4px 0;">✒️ Signature</h4>
+        <div class="row">
+          <button class="btn small secondary" data-smode="draw" id="sign-mode-draw">✏️ Draw</button>
+          <button class="btn small secondary" data-smode="type" id="sign-mode-type">⌨️ Type</button>
+          <button class="btn small secondary" data-smode="upload" id="sign-mode-upload">📁 Upload</button>
         </div>
-        <div class="field" style="flex:none;">
-          <label>&nbsp;</label>
-          <button class="btn small secondary" id="sign-drawClear">Clear</button>
+        <div id="sign-drawArea">
+          <canvas id="sign-drawCanvas" width="420" height="140" style="border:1px solid var(--border); border-radius:6px; background:#fff; touch-action:none; cursor:crosshair; max-width:100%;"></canvas>
+          <div class="row" style="margin-top:6px;">
+            <div class="field" style="flex:none;">
+              <label for="sign-drawColor">Ink color</label>
+              <input type="color" id="sign-drawColor" value="#123a7a">
+            </div>
+            <div class="field" style="flex:none;">
+              <label>&nbsp;</label>
+              <button class="btn small secondary" id="sign-drawClear">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div id="sign-typeArea" style="display:none;">
+          <input type="text" id="sign-typeText" placeholder="Type your name" style="width:100%;">
+          <div class="row" style="margin-top:6px;">
+            <div class="field">
+              <label for="sign-typeFont">Style</label>
+              <select id="sign-typeFont">
+                <option value="'Dancing Script', cursive" selected>Elegant script</option>
+                <option value="'Caveat', cursive">Casual handwriting</option>
+                <option value="'Homemade Apple', cursive">Pen script</option>
+              </select>
+            </div>
+            <div class="field" style="flex:none;">
+              <label for="sign-typeColor">Ink color</label>
+              <input type="color" id="sign-typeColor" value="#123a7a">
+            </div>
+          </div>
+          <div id="sign-typePreviewWrap" style="margin-top:10px; padding:14px; border:1px solid var(--border); border-radius:6px; background:#fff; display:inline-block;">
+            <span id="sign-typePreview" style="font-size:36px; white-space:nowrap;">Your name</span>
+          </div>
+        </div>
+        <div id="sign-uploadArea" style="display:none;">
+          <input type="file" id="sign-uploadFile" accept="image/png, image/jpeg">
+          <p class="hint">A signature on a white or transparent background works best.</p>
+        </div>
+        <div class="downloadRow">
+          <button class="btn success" id="sign-useSignatureBtn">✔️ Use as signature</button>
+          <span class="statusMsg" id="sign-createStatus"></span>
         </div>
       </div>
-    </div>
 
-    <div id="sign-typeArea" style="display:none;">
-      <input type="text" id="sign-typeText" placeholder="Type your name" style="width:100%; max-width:400px;">
-      <div class="row" style="margin-top:6px;">
-        <div class="field">
-          <label for="sign-typeFont">Style</label>
-          <select id="sign-typeFont">
-            <option value="'Dancing Script', cursive" selected>Elegant script</option>
-            <option value="'Caveat', cursive">Casual handwriting</option>
-            <option value="'Homemade Apple', cursive">Pen script</option>
-          </select>
+      <div class="field" style="min-width:320px;">
+        <h4 style="margin:4px 0;">🖋️ Paraph / initials</h4>
+        <div class="row">
+          <button class="btn small secondary" data-pmode="draw" id="paraph-mode-draw">✏️ Draw</button>
+          <button class="btn small secondary" data-pmode="type" id="paraph-mode-type">⌨️ Type</button>
+          <button class="btn small secondary" data-pmode="upload" id="paraph-mode-upload">📁 Upload</button>
         </div>
-        <div class="field" style="flex:none;">
-          <label for="sign-typeColor">Ink color</label>
-          <input type="color" id="sign-typeColor" value="#123a7a">
+        <div id="paraph-drawArea">
+          <canvas id="paraph-drawCanvas" width="420" height="140" style="border:1px solid var(--border); border-radius:6px; background:#fff; touch-action:none; cursor:crosshair; max-width:100%;"></canvas>
+          <div class="row" style="margin-top:6px;">
+            <div class="field" style="flex:none;">
+              <label for="paraph-drawColor">Ink color</label>
+              <input type="color" id="paraph-drawColor" value="#123a7a">
+            </div>
+            <div class="field" style="flex:none;">
+              <label>&nbsp;</label>
+              <button class="btn small secondary" id="paraph-drawClear">Clear</button>
+            </div>
+          </div>
+        </div>
+        <div id="paraph-typeArea" style="display:none;">
+          <input type="text" id="paraph-typeText" placeholder="Type your initials" style="width:100%;">
+          <div class="row" style="margin-top:6px;">
+            <div class="field">
+              <label for="paraph-typeFont">Style</label>
+              <select id="paraph-typeFont">
+                <option value="'Dancing Script', cursive" selected>Elegant script</option>
+                <option value="'Caveat', cursive">Casual handwriting</option>
+                <option value="'Homemade Apple', cursive">Pen script</option>
+              </select>
+            </div>
+            <div class="field" style="flex:none;">
+              <label for="paraph-typeColor">Ink color</label>
+              <input type="color" id="paraph-typeColor" value="#123a7a">
+            </div>
+          </div>
+          <div id="paraph-typePreviewWrap" style="margin-top:10px; padding:14px; border:1px solid var(--border); border-radius:6px; background:#fff; display:inline-block;">
+            <span id="paraph-typePreview" style="font-size:36px; white-space:nowrap;">In.</span>
+          </div>
+        </div>
+        <div id="paraph-uploadArea" style="display:none;">
+          <input type="file" id="paraph-uploadFile" accept="image/png, image/jpeg">
+          <p class="hint">A paraph on a white or transparent background works best.</p>
+        </div>
+        <div class="downloadRow">
+          <button class="btn success" id="paraph-useSignatureBtn">✔️ Use as paraph</button>
+          <span class="statusMsg" id="paraph-createStatus"></span>
         </div>
       </div>
-      <div id="sign-typePreviewWrap" style="margin-top:10px; padding:14px; border:1px solid var(--border); border-radius:6px; background:#fff; display:inline-block;">
-        <span id="sign-typePreview" style="font-size:42px; white-space:nowrap;">Your name</span>
-      </div>
-      <p class="hint">Uses Google Fonts to render a handwriting-style signature — needs an internet connection the first time.</p>
-    </div>
-
-    <div id="sign-uploadArea" style="display:none;">
-      <input type="file" id="sign-uploadFile" accept="image/png, image/jpeg">
-      <p class="hint">A signature on a white or transparent background works best.</p>
-    </div>
-
-    <div class="downloadRow">
-      <button class="btn success" id="sign-useSignatureBtn">✔️ Use this signature</button>
     </div>
   </section>
 
   <section id="sign-placeSection" style="display:none;">
-    <h3>3. Place it on the page</h3>
+    <h3>3. Place signature(s) on pages</h3>
     <div class="row" style="align-items:center;">
       <button class="btn small secondary" id="sign-prevPage">← Prev</button>
       <span id="sign-pageIndicator" style="font-weight:600;"></span>
@@ -519,15 +587,74 @@
           <output id="sign-sizeVal">35</output>
         </div>
       </div>
+      <div class="field" style="flex:none; min-width:160px;">
+        <label for="sign-rotation">Rotation (°)</label>
+        <div class="sliderRow">
+          <input type="range" id="sign-rotation" min="-180" max="180" value="0">
+          <output id="sign-rotationVal">0</output>
+        </div>
+      </div>
     </div>
-    <p class="hint">Click on the page to place your signature. Drag it to reposition.</p>
+    <p class="hint">Click on the page to position your signature, drag to fine-tune, then click "Add signature here". You can add it to as many pages as you like — the last page is selected by default. Each one you add appears in the list below and can be removed.</p>
     <div id="sign-stageWrap" style="overflow:auto; max-width:100%;">
       <div class="editorStage" id="sign-stage"></div>
     </div>
+    <div class="downloadRow">
+      <button class="btn secondary" id="sign-addPlacementBtn">➕ Add signature here</button>
+    </div>
+    <ul class="fileList" id="sign-placementList" style="margin-top:10px;"></ul>
+  </section>
+
+  <section id="sign-paraphSection" style="display:none;">
+    <h3>4. Apply paraph across pages <span style="font-weight:normal; font-size:0.85em;">(optional)</span></h3>
+    <div class="checkline">
+      <input type="checkbox" id="paraph-enable">
+      <label for="paraph-enable">Stamp the paraph on a range of pages, in the same spot on each page (like a watermark)</label>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="paraph-pages">Pages</label>
+        <input type="text" id="paraph-pages" placeholder="e.g. 1-4 (default: every page but the last)">
+      </div>
+      <div class="field">
+        <label for="paraph-position">Position</label>
+        <select id="paraph-position">
+          <option value="bottom-right" selected>Bottom right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="top-right">Top right</option>
+          <option value="top-left">Top left</option>
+          <option value="center">Center</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="paraph-size">Size (% of page width)</label>
+        <div class="sliderRow">
+          <input type="range" id="paraph-size" min="5" max="40" value="12">
+          <output id="paraph-sizeVal">12</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="paraph-rotation">Rotation (°)</label>
+        <div class="sliderRow">
+          <input type="range" id="paraph-rotation" min="-180" max="180" value="0">
+          <output id="paraph-rotationVal">0</output>
+        </div>
+      </div>
+      <div class="field">
+        <label for="paraph-opacity">Opacity</label>
+        <div class="sliderRow">
+          <input type="range" id="paraph-opacity" min="0.1" max="1" step="0.05" value="1">
+          <output id="paraph-opacityVal">1</output>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Leave "Pages" blank to use the default (every page except the last).</p>
   </section>
 
   <section id="sign-goSection" style="display:none;">
-    <h3>4. Apply &amp; download</h3>
+    <h3>5. Apply &amp; download</h3>
     <div class="downloadRow">
       <button class="btn" id="sign-goBtn">✒️ Sign &amp; download</button>
       <span class="statusMsg" id="sign-status"></span>
@@ -717,6 +844,35 @@
   </section>
 </div>
 
+<div class="toolPanel" id="panel-metadata">
+  <h1>🧹 Remove Metadata</h1>
+  <p class="subtitle">Strip the title, author, and other identifying details a PDF carries with it.</p>
+  <div class="note">This clears the document's Info dictionary (title, author, subject, keywords, creator/producer app, creation &amp; modification dates) and any XMP metadata stream. It doesn't touch the visible page content.</div>
+
+  <section>
+    <h3>1. Upload a PDF</h3>
+    <div class="dropzone" id="metadata-dropzone">
+      <div>📁 Click to choose a PDF, or drag one here</div>
+      <input type="file" id="metadata-fileInput" accept="application/pdf">
+    </div>
+    <p class="statusMsg" id="metadata-loadStatus"></p>
+  </section>
+
+  <section id="metadata-optionsSection" style="display:none;">
+    <h3>2. What's currently set</h3>
+    <table class="simpleTable" id="metadata-table"></table>
+  </section>
+
+  <section id="metadata-goSection" style="display:none;">
+    <h3>3. Remove &amp; download</h3>
+    <div class="downloadRow">
+      <button class="btn" id="metadata-goBtn">🧹 Remove metadata &amp; download</button>
+      <span class="statusMsg" id="metadata-status"></span>
+    </div>
+    <div class="errorMsg" id="metadata-error"></div>
+  </section>
+</div>
+
 <div class="toolPanel" id="panel-ocr">
   <h1>🔍 OCR PDF</h1>
   <p class="subtitle">Turn a scanned PDF into a searchable, selectable document.</p>
@@ -766,7 +922,93 @@
       <button class="btn secondary" id="ocr-downloadTxtBtn">⬇️ Download extracted text (.txt)</button>
     </div>
   </section>
+
+  <footer class="credit">
+    <img src="data:image/png;base64,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" alt="SHT - Standalone HTML Tools - Original source: https://github.com/Trottefox/SHT_StandaloneHTLMTools - https://creativecommons.org/licenses/by-nc/4.0/deed.fr">
+    <p class="hint">This tool is free to reuse and adapt but not for commercial use — please keep this credit if you build on it. Original source: <a href="https://github.com/Trottefox/SHT_StandaloneHTLMTools" target="_blank" rel="noopener">github.com/Trottefox/SHT_StandaloneHTLMTools - https://creativecommons.org/licenses/by-nc/4.0/deed.fr</a></p>
+	<p class="hint">Also powered by <a href="https://github.com/cantoo-scribe/pdf-lib" target="_blank" rel="noopener">pdf-lib (MIT License)</a></p>
+	<p class="hint">Made with the help of Anthropic's Claude code</a></p>  
+  </footer>
+  
+  
 </div>
+
+<div class="toolPanel" id="panel-authenticate">
+  <h1>🔏 Authenticate PDF</h1>
+  <p class="subtitle">Turn each page into a picture and hide a secret message inside the pixels (steganography), so the PDF carries proof of authenticity that isn't visible to the eye.</p>
+  <div class="note">Every page is rasterized to a lossless PNG image and rebuilt as a new PDF (so text will no longer be selectable — this is unavoidable, since the message is hidden in image pixel data). The message is bound to a hash of each page's own pixel data, so if the file is edited or the images are modified after authentication, the "Authentify PDF" tool will detect the mismatch and flag the file as changed instead of silently reporting success. This gives tamper-evidence, not encryption — the message itself is still just hidden (not secret from someone who knows the technique).</div>
+
+  <section>
+    <h3>1. Upload a PDF</h3>
+    <div class="dropzone" id="auth-dropzone">
+      <div>📁 Click to choose a PDF, or drag one here</div>
+      <input type="file" id="auth-fileInput" accept="application/pdf">
+    </div>
+    <p class="statusMsg" id="auth-loadStatus"></p>
+  </section>
+
+  <section id="auth-optionsSection" style="display:none;">
+    <h3>2. Secret message</h3>
+    <div class="row">
+      <div class="field" style="flex:none;">
+        <button class="btn small secondary" data-authmode="text" id="auth-mode-text">⌨️ Type / paste</button>
+        <button class="btn small secondary" data-authmode="file" id="auth-mode-file">📁 Upload .txt file</button>
+      </div>
+    </div>
+    <div id="auth-textArea">
+      <textarea id="auth-textInput" rows="4" style="width:100%;" placeholder="Paste base64 text here"></textarea>
+    </div>
+    <div id="auth-fileArea" style="display:none;">
+      <input type="file" id="auth-fileInputMsg" accept=".txt,text/plain">
+    </div>
+    <p class="hint">The message should be base64 text (either type/paste it directly, or upload a .txt file that contains it). It's embedded as-is — this tool doesn't encode your input into base64 for you.</p>
+
+    <h3>3. Resolution</h3>
+    <div class="row">
+      <div class="field">
+        <label for="auth-dpi">Page resolution (DPI)</label>
+        <div class="sliderRow">
+          <input type="range" id="auth-dpi" min="72" max="300" value="150" step="6">
+          <output id="auth-dpiVal">150</output>
+        </div>
+      </div>
+    </div>
+    <p class="hint">Higher resolution gives more room to hide a longer message, at the cost of a bigger file.</p>
+  </section>
+
+  <section id="auth-goSection" style="display:none;">
+    <h3>4. Authenticate &amp; download</h3>
+    <div class="downloadRow">
+      <button class="btn" id="auth-goBtn">🔏 Authenticate &amp; download</button>
+      <span class="statusMsg" id="auth-status"></span>
+    </div>
+    <div class="errorMsg" id="auth-error"></div>
+  </section>
+</div>
+
+<div class="toolPanel" id="panel-authentify">
+  <h1>🕵️ Authentify PDF</h1>
+  <p class="subtitle">Read the hidden message back out of a PDF that was processed with "Authenticate PDF" — and check whether the file still matches what was authenticated.</p>
+
+  <section>
+    <h3>1. Upload the authenticated PDF</h3>
+    <div class="dropzone" id="authread-dropzone">
+      <div>📁 Click to choose a PDF, or drag one here</div>
+      <input type="file" id="authread-fileInput" accept="application/pdf">
+    </div>
+    <p class="statusMsg" id="authread-status"></p>
+  </section>
+
+  <section id="authread-resultSection" style="display:none;">
+    <h3>2. Recovered message</h3>
+    <textarea id="authread-result" rows="4" readonly style="width:100%;"></textarea>
+    <div class="downloadRow">
+      <button class="btn secondary" id="authread-downloadBtn">💾 Download as .txt</button>
+    </div>
+  </section>
+  <div class="errorMsg" id="authread-error"></div>
+</div>
+
 
 </main>
 
@@ -1494,11 +1736,14 @@ function baseName(filename) {
   const loadStatus = document.getElementById('compress-loadStatus');
   const optionsSection = document.getElementById('compress-optionsSection');
   const modeSelect = document.getElementById('compress-mode');
+  const qualityOnlyOptions = document.getElementById('compress-qualityOnlyOptions');
   const rasterOptions = document.getElementById('compress-rasterOptions');
   const dpiInput = document.getElementById('compress-dpi');
   const dpiVal = document.getElementById('compress-dpiVal');
   const qualityInput = document.getElementById('compress-quality');
   const qualityVal = document.getElementById('compress-qualityVal');
+  const rasterQualityInput = document.getElementById('compress-rasterQuality');
+  const rasterQualityVal = document.getElementById('compress-rasterQualityVal');
   const goSection = document.getElementById('compress-goSection');
   const goBtn = document.getElementById('compress-goBtn');
   const status = document.getElementById('compress-status');
@@ -1534,9 +1779,12 @@ function baseName(filename) {
 
   modeSelect.addEventListener('change', () => {
     rasterOptions.style.display = modeSelect.value === 'rasterize' ? 'block' : 'none';
+    qualityOnlyOptions.style.display = modeSelect.value === 'smart' ? 'block' : 'none';
   });
+  modeSelect.dispatchEvent(new Event('change'));
   dpiInput.addEventListener('input', () => dpiVal.textContent = dpiInput.value);
   qualityInput.addEventListener('input', () => qualityVal.textContent = qualityInput.value);
+  rasterQualityInput.addEventListener('input', () => rasterQualityVal.textContent = rasterQualityInput.value);
 
   function dataURLToUint8Array(dataUrl) {
     const base64 = dataUrl.split(',')[1];
@@ -1548,6 +1796,88 @@ function baseName(filename) {
 
   async function quickOptimize(buf) {
     const doc = await loadPdfLibDoc(buf.slice(0), { ignoreEncryption: true });
+    return await doc.save({ useObjectStreams: true });
+  }
+
+  async function smartCompress(buf, qualityPct) {
+    const doc = await loadPdfLibDoc(buf.slice(0), { ignoreEncryption: true });
+    const pdfJsDoc = await loadPdfJsDoc(buf.slice(0));
+    const pages = doc.getPages();
+    const XObjectName = PDFLib.PDFName.of('XObject');
+    const SubtypeName = PDFLib.PDFName.of('Subtype');
+    const ImageName = PDFLib.PDFName.of('Image');
+    const FilterName = PDFLib.PDFName.of('Filter');
+    const DCTName = PDFLib.PDFName.of('DCTDecode');
+
+    for (let i = 0; i < pages.length; i++) {
+      status.textContent = 'Compressing page ' + (i + 1) + ' of ' + pages.length + '…';
+      const page = pages[i];
+      let hasText = false;
+      try {
+        const pdfJsPage = await pdfJsDoc.getPage(i + 1);
+        const textContent = await pdfJsPage.getTextContent();
+        hasText = textContent.items.some((it) => (it.str || '').trim().length > 0);
+      } catch (e) { /* assume no text if pdf.js can't read it */ }
+
+      const resources = page.node.Resources ? page.node.Resources() : null;
+      const xobjDict = resources ? resources.lookupMaybe(XObjectName, PDFLib.PDFDict) : null;
+      let recompressedAny = false;
+
+      if (xobjDict) {
+        const keys = xobjDict.keys();
+        for (const key of keys) {
+          let obj;
+          try { obj = doc.context.lookup(xobjDict.get(key)); } catch (e) { continue; }
+          if (!obj || !obj.dict) continue;
+          if (obj.dict.get(SubtypeName) !== ImageName) continue;
+          const filter = obj.dict.get(FilterName);
+          const isJpeg = filter === DCTName || (filter && filter.toString && filter.toString().includes('DCTDecode'));
+          if (!isJpeg) continue; // only JPEG-encoded images can be safely re-decoded/re-encoded here
+          try {
+            const rawBytes = obj.getContents ? obj.getContents() : obj.contents;
+            const blob = new Blob([rawBytes], { type: 'image/jpeg' });
+            const bitmap = await createImageBitmap(blob);
+            const canvas = document.createElement('canvas');
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', qualityPct / 100);
+            const newBytes = dataURLToUint8Array(dataUrl);
+            if (newBytes.length < rawBytes.length) {
+              const newImage = await doc.embedJpg(newBytes);
+              xobjDict.set(key, newImage.ref);
+              recompressedAny = true;
+            }
+          } catch (e) { /* leave this image untouched if anything goes wrong */ }
+        }
+      }
+
+      if (!hasText && !recompressedAny) {
+        // No selectable text on this page and no JPEGs we could recompress in place
+        // (e.g. a scanned page saved as a raw/PNG-style image) — treat the whole
+        // page as a picture instead, since there's no text layer to protect.
+        try {
+          const pdfJsPage = await pdfJsDoc.getPage(i + 1);
+          const baseViewport = pdfJsPage.getViewport({ scale: 1 });
+          const scale = Math.min(2, Math.max(1, 150 / 72));
+          const renderViewport = pdfJsPage.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.ceil(renderViewport.width));
+          canvas.height = Math.max(1, Math.ceil(renderViewport.height));
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          await pdfJsPage.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+          const dataUrl = canvas.toDataURL('image/jpeg', qualityPct / 100);
+          const jpgBytes = dataURLToUint8Array(dataUrl);
+          const jpgImage = await doc.embedJpg(jpgBytes);
+          const newPage = doc.insertPage(i, [baseViewport.width, baseViewport.height]);
+          newPage.drawImage(jpgImage, { x: 0, y: 0, width: baseViewport.width, height: baseViewport.height });
+          doc.removePage(i + 1);
+        } catch (e) { /* if rasterizing this page fails, just leave it as-is */ }
+      }
+    }
     return await doc.save({ useObjectStreams: true });
   }
 
@@ -1585,7 +1915,9 @@ function baseName(filename) {
     try {
       let bytes;
       if (modeSelect.value === 'rasterize') {
-        bytes = await rasterizeCompress(originalBuf, parseInt(dpiInput.value, 10), parseInt(qualityInput.value, 10));
+        bytes = await rasterizeCompress(originalBuf, parseInt(dpiInput.value, 10), parseInt(rasterQualityInput.value, 10));
+      } else if (modeSelect.value === 'smart') {
+        bytes = await smartCompress(originalBuf, parseInt(qualityInput.value, 10));
       } else {
         bytes = await quickOptimize(originalBuf);
       }
@@ -1666,71 +1998,12 @@ function baseName(filename) {
     return pages;
   }
 
-  function xmlEscape(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
-
-  function paragraphXml(text) {
-    if (!text || !text.trim()) return '<w:p/>';
-    return '<w:p><w:r><w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r></w:p>';
-  }
-
-  function pageBreakXml() {
-    return '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
-  }
-
-  function buildDocx(pagesLines, insertPageBreaks) {
-    let bodyXml = '';
-    pagesLines.forEach((lines, idx) => {
-      if (idx > 0 && insertPageBreaks) bodyXml += pageBreakXml();
-      if (!lines.length) bodyXml += '<w:p/>';
-      lines.forEach((line) => { bodyXml += paragraphXml(line); });
+  function buildTxt(pagesLines, insertPageBreaks) {
+    const parts = pagesLines.map((lines, idx) => {
+      const pageText = lines.join('\n');
+      return insertPageBreaks ? '----- Page ' + (idx + 1) + ' -----\n' + pageText : pageText;
     });
-
-    const documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
-      '<w:body>' + bodyXml +
-      '<w:sectPr><w:pgSz w:w="12240" w:h="15840"/>' +
-      '<w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="720" w:footer="720" w:gutter="0"/>' +
-      '</w:sectPr></w:body></w:document>';
-
-    const contentTypesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
-      '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
-      '<Default Extension="xml" ContentType="application/xml"/>' +
-      '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
-      '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
-      '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
-      '</Types>';
-
-    const relsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-      '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
-      '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
-      '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>' +
-      '</Relationships>';
-
-    const docRelsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
-
-    const coreXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ' +
-      'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-      '<dc:title>Converted document</dc:title><dc:creator>PDF Toolkit</dc:creator></cp:coreProperties>';
-
-    const appXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
-      '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties">' +
-      '<Application>PDF Toolkit</Application></Properties>';
-
-    const zipInput = {
-      '[Content_Types].xml': fflate.strToU8(contentTypesXml),
-      '_rels/.rels': fflate.strToU8(relsXml),
-      'word/document.xml': fflate.strToU8(documentXml),
-      'word/_rels/document.xml.rels': fflate.strToU8(docRelsXml),
-      'docProps/core.xml': fflate.strToU8(coreXml),
-      'docProps/app.xml': fflate.strToU8(appXml)
-    };
-    return fflate.zipSync(zipInput, { level: 6 });
+    return parts.join(insertPageBreaks ? '\n\n' : '\n\n');
   }
 
   goBtn.addEventListener('click', async () => {
@@ -1745,9 +2018,8 @@ function baseName(filename) {
       if (totalChars === 0) {
         throw new Error('No extractable text was found — this PDF may be a scan. Try the OCR PDF tool first.');
       }
-      status.textContent = 'Building Word document…';
-      const docxBytes = buildDocx(pagesLines, pageBreaksCb.checked);
-      downloadBytes(docxBytes, baseFilename + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      const txt = buildTxt(pagesLines, pageBreaksCb.checked);
+      downloadBytes(txt, baseFilename + '.txt', 'text/plain');
       status.textContent = 'Done.';
     } catch (err) {
       console.error(err);
@@ -2063,6 +2335,90 @@ function baseName(filename) {
     } catch (err) {
       console.error(err);
       errorEl.textContent = 'Could not protect this file (' + err.message + ').';
+      status.textContent = '';
+    } finally {
+      goBtn.disabled = false;
+    }
+  });
+})();
+</script>
+
+<script>
+(function () {
+  const dropzone = document.getElementById('metadata-dropzone');
+  const fileInput = document.getElementById('metadata-fileInput');
+  const loadStatus = document.getElementById('metadata-loadStatus');
+  const optionsSection = document.getElementById('metadata-optionsSection');
+  const table = document.getElementById('metadata-table');
+  const goSection = document.getElementById('metadata-goSection');
+  const goBtn = document.getElementById('metadata-goBtn');
+  const status = document.getElementById('metadata-status');
+  const errorEl = document.getElementById('metadata-error');
+
+  let originalBuf = null;
+  let baseFilename = 'document';
+
+  const FIELDS = [
+    ['Title', 'getTitle'], ['Author', 'getAuthor'], ['Subject', 'getSubject'],
+    ['Keywords', 'getKeywords'], ['Creator', 'getCreator'], ['Producer', 'getProducer'],
+    ['Creation date', 'getCreationDate'], ['Modification date', 'getModificationDate']
+  ];
+
+  setupDropzone(dropzone, fileInput, (files) => loadFile(files[0]));
+
+  async function loadFile(file) {
+    if (!file) return;
+    errorEl.textContent = '';
+    loadStatus.textContent = 'Loading…';
+    optionsSection.style.display = 'none';
+    goSection.style.display = 'none';
+    try {
+      baseFilename = baseName(file.name);
+      originalBuf = await readFileAsArrayBuffer(file);
+      const doc = await loadPdfLibDoc(originalBuf.slice(0), { ignoreEncryption: true });
+      let rows = '<tr><th>Field</th><th>Value</th></tr>';
+      let anySet = false;
+      FIELDS.forEach(([label, getter]) => {
+        let value = '';
+        try { value = doc[getter] ? doc[getter]() : ''; } catch (e) { value = ''; }
+        if (value instanceof Date) value = value.toISOString();
+        if (value) anySet = true;
+        rows += '<tr><td>' + label + '</td><td>' + (value ? String(value).replace(/</g, '&lt;') : '<span style="color:#999;">(not set)</span>') + '</td></tr>';
+      });
+      table.innerHTML = rows;
+      loadStatus.textContent = anySet ? 'Loaded — this file has metadata set.' : 'Loaded — no standard metadata fields appear to be set (there may still be an XMP stream).';
+      optionsSection.style.display = 'block';
+      goSection.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = 'Could not open this PDF (' + err.message + ').';
+      loadStatus.textContent = '';
+    }
+  }
+
+  goBtn.addEventListener('click', async () => {
+    errorEl.textContent = '';
+    if (!originalBuf) { errorEl.textContent = 'Please choose a PDF first.'; return; }
+    goBtn.disabled = true;
+    status.textContent = 'Removing metadata…';
+    try {
+      const doc = await loadPdfLibDoc(originalBuf.slice(0), { ignoreEncryption: true });
+      doc.setTitle(''); doc.setAuthor(''); doc.setSubject(''); doc.setKeywords([]);
+      doc.setCreator(''); doc.setProducer('');
+      try { doc.setCreationDate(new Date(0)); } catch (e) {}
+      try { doc.setModificationDate(new Date(0)); } catch (e) {}
+      // Drop any XMP metadata stream attached to the catalog, if present.
+      try {
+        const catalog = doc.catalog;
+        const metaKey = PDFLib.PDFName.of('Metadata');
+        if (catalog.has(metaKey)) catalog.delete(metaKey);
+      } catch (e) { /* best effort */ }
+      const bytes = await doc.save();
+      downloadBytes(bytes, baseFilename + '-no-metadata.pdf', 'application/pdf');
+      status.textContent = 'Done.';
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = 'Could not remove metadata (' + err.message + ').';
       status.textContent = '';
     } finally {
       goBtn.disabled = false;
@@ -2475,40 +2831,67 @@ function baseName(filename) {
   const loadStatus = document.getElementById('sign-loadStatus');
   const createSection = document.getElementById('sign-createSection');
   const placeSection = document.getElementById('sign-placeSection');
+  const paraphSection = document.getElementById('sign-paraphSection');
   const goSection = document.getElementById('sign-goSection');
-
-  const modeBtns = {
-    draw: document.getElementById('sign-mode-draw'),
-    type: document.getElementById('sign-mode-type'),
-    upload: document.getElementById('sign-mode-upload')
-  };
-  const drawArea = document.getElementById('sign-drawArea');
-  const typeArea = document.getElementById('sign-typeArea');
-  const uploadArea = document.getElementById('sign-uploadArea');
-
-  const drawCanvas = document.getElementById('sign-drawCanvas');
-  const drawColorInput = document.getElementById('sign-drawColor');
-  const drawClearBtn = document.getElementById('sign-drawClear');
-
-  const typeText = document.getElementById('sign-typeText');
-  const typeFontSelect = document.getElementById('sign-typeFont');
-  const typeColorInput = document.getElementById('sign-typeColor');
-  const typePreview = document.getElementById('sign-typePreview');
-
-  const uploadFileInput = document.getElementById('sign-uploadFile');
-
-  const useSignatureBtn = document.getElementById('sign-useSignatureBtn');
 
   const prevPageBtn = document.getElementById('sign-prevPage');
   const nextPageBtn = document.getElementById('sign-nextPage');
   const pageIndicator = document.getElementById('sign-pageIndicator');
   const sizeInput = document.getElementById('sign-size');
   const sizeVal = document.getElementById('sign-sizeVal');
+  const rotationInput = document.getElementById('sign-rotation');
+  const rotationVal = document.getElementById('sign-rotationVal');
   const stage = document.getElementById('sign-stage');
+  const addPlacementBtn = document.getElementById('sign-addPlacementBtn');
+  const placementList = document.getElementById('sign-placementList');
+
+  const paraphEnable = document.getElementById('paraph-enable');
+  const paraphPagesInput = document.getElementById('paraph-pages');
+  const paraphPositionSelect = document.getElementById('paraph-position');
+  const paraphSizeInput = document.getElementById('paraph-size');
+  const paraphSizeVal = document.getElementById('paraph-sizeVal');
+  const paraphRotationInput = document.getElementById('paraph-rotation');
+  const paraphRotationVal = document.getElementById('paraph-rotationVal');
+  const paraphOpacityInput = document.getElementById('paraph-opacity');
+  const paraphOpacityVal = document.getElementById('paraph-opacityVal');
 
   const goBtn = document.getElementById('sign-goBtn');
   const status = document.getElementById('sign-status');
   const errorEl = document.getElementById('sign-error');
+
+  // Converts an on-screen placement box (in the SAME pixel space as the pdf.js
+  // preview canvas) into raw PDF-space x/y/width/height/rotation, using pdf.js's
+  // own convertToPdfPoint(). This is what makes placement correct even when a
+  // page has its own /Rotate attribute (common in scanned/photographed PDFs) —
+  // simple width/height ratio math alone gets this wrong because pdf-lib's page
+  // dimensions are always unrotated, while the on-screen preview is rotated.
+  function computePlacementInPdfSpace(viewport, p) {
+    const cx = p.x + p.width / 2, cy = p.y + p.height / 2;
+    const theta = (p.rotationDeg || 0) * Math.PI / 180;
+    const cosT = Math.cos(theta), sinT = Math.sin(theta);
+    const halfW = p.width / 2, halfH = p.height / 2;
+    const local = [[-halfW, -halfH], [halfW, -halfH], [halfW, halfH], [-halfW, halfH]];
+    const screenCorners = local.map(([dx, dy]) => [cx + dx * cosT - dy * sinT, cy + dx * sinT + dy * cosT]);
+    const pdfCorners = screenCorners.map(([sx, sy]) => viewport.convertToPdfPoint(sx, sy));
+    const [TL, TR, BR] = pdfCorners;
+    const BL = pdfCorners[3];
+    const width = Math.hypot(TR[0] - TL[0], TR[1] - TL[1]);
+    const height = Math.hypot(BL[0] - TL[0], BL[1] - TL[1]);
+    const angleRad = Math.atan2(TR[1] - TL[1], TR[0] - TL[0]);
+    const centerX = (TL[0] + BR[0]) / 2, centerY = (TL[1] + BR[1]) / 2;
+    const dx = (width / 2) * Math.cos(angleRad) - (height / 2) * Math.sin(angleRad);
+    const dy = (width / 2) * Math.sin(angleRad) + (height / 2) * Math.cos(angleRad);
+    return { x: centerX - dx, y: centerY - dy, width, height, rotateDeg: angleRad * 180 / Math.PI };
+  }
+
+  const saveViewportCache = {};
+  async function getSaveViewport(pageNum) {
+    if (!saveViewportCache[pageNum]) {
+      const pjsPage = await pdfJsDoc.getPage(pageNum);
+      saveViewportCache[pageNum] = pjsPage.getViewport({ scale: SCALE });
+    }
+    return saveViewportCache[pageNum];
+  }
 
   let originalBuf = null;
   let baseFilename = 'document';
@@ -2516,11 +2899,12 @@ function baseName(filename) {
   let numPages = 0;
   let currentPage = 1;
   const SCALE = 1.3;
-  let currentMode = 'draw';
-  let signatureDataUrl = null;
-  let signatureAspect = 3; // width / height
-  let placement = null; // { pageNum, x, y, width, height } in on-screen px at SCALE
   let pageViewportCache = {};
+
+  let signatureDataUrl = null, signatureAspect = 3;
+  let paraphDataUrl = null, paraphAspect = 3;
+  let pending = null; // { pageNum, x, y, width, height, rotationDeg, vpWidth, vpHeight }
+  let placements = []; // added signature placements
 
   setupDropzone(dropzone, fileInput, (files) => loadFile(files[0]));
 
@@ -2530,16 +2914,23 @@ function baseName(filename) {
     loadStatus.textContent = 'Loading…';
     createSection.style.display = 'none';
     placeSection.style.display = 'none';
+    paraphSection.style.display = 'none';
     goSection.style.display = 'none';
+    placements = [];
+    pending = null;
+    renderPlacementList();
     try {
       baseFilename = baseName(file.name);
       originalBuf = await readFileAsArrayBuffer(file);
       pdfJsDoc = await loadPdfJsDoc(originalBuf.slice(0));
       numPages = pdfJsDoc.numPages;
-      currentPage = 1;
-      placement = null;
+      currentPage = numPages; // default to last page
       loadStatus.textContent = numPages + ' pages loaded.';
       createSection.style.display = 'block';
+      placeSection.style.display = 'block';
+      paraphSection.style.display = 'block';
+      goSection.style.display = 'block';
+      await renderCurrentPage();
     } catch (err) {
       console.error(err);
       errorEl.textContent = 'Could not open this PDF (' + err.message + ').';
@@ -2547,21 +2938,47 @@ function baseName(filename) {
     }
   }
 
-  /* ----- signature creation mode switching ----- */
-  function setMode(mode) {
-    currentMode = mode;
-    Object.keys(modeBtns).forEach((k) => modeBtns[k].style.outline = (k === mode ? '2px solid #2b6cb0' : ''));
-    drawArea.style.display = mode === 'draw' ? 'block' : 'none';
-    typeArea.style.display = mode === 'type' ? 'block' : 'none';
-    uploadArea.style.display = mode === 'upload' ? 'block' : 'none';
+  function loadImageEl(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Could not load image'));
+      img.src = src;
+    });
   }
-  modeBtns.draw.addEventListener('click', () => setMode('draw'));
-  modeBtns.type.addEventListener('click', () => setMode('type'));
-  modeBtns.upload.addEventListener('click', () => setMode('upload'));
-  setMode('draw');
 
-  /* ----- draw pad ----- */
-  (function () {
+  /* ---------- generic signature/paraph creator factory ---------- */
+  function setupCreator(prefix, defaultPreviewText) {
+    const modeBtns = {
+      draw: document.getElementById(prefix + '-mode-draw'),
+      type: document.getElementById(prefix + '-mode-type'),
+      upload: document.getElementById(prefix + '-mode-upload')
+    };
+    const drawArea = document.getElementById(prefix + '-drawArea');
+    const typeArea = document.getElementById(prefix + '-typeArea');
+    const uploadArea = document.getElementById(prefix + '-uploadArea');
+    const drawCanvas = document.getElementById(prefix + '-drawCanvas');
+    const drawColorInput = document.getElementById(prefix + '-drawColor');
+    const drawClearBtn = document.getElementById(prefix + '-drawClear');
+    const typeText = document.getElementById(prefix + '-typeText');
+    const typeFontSelect = document.getElementById(prefix + '-typeFont');
+    const typeColorInput = document.getElementById(prefix + '-typeColor');
+    const typePreview = document.getElementById(prefix + '-typePreview');
+    const uploadFileInput = document.getElementById(prefix + '-uploadFile');
+
+    let currentMode = 'draw';
+    function setMode(mode) {
+      currentMode = mode;
+      Object.keys(modeBtns).forEach((k) => modeBtns[k].style.outline = (k === mode ? '2px solid #2b6cb0' : ''));
+      drawArea.style.display = mode === 'draw' ? 'block' : 'none';
+      typeArea.style.display = mode === 'type' ? 'block' : 'none';
+      uploadArea.style.display = mode === 'upload' ? 'block' : 'none';
+    }
+    modeBtns.draw.addEventListener('click', () => setMode('draw'));
+    modeBtns.type.addEventListener('click', () => setMode('type'));
+    modeBtns.upload.addEventListener('click', () => setMode('upload'));
+    setMode('draw');
+
     const ctx = drawCanvas.getContext('2d');
     ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
     let drawing = false;
@@ -2585,95 +3002,103 @@ function baseName(filename) {
     });
     drawCanvas.addEventListener('pointerup', () => { drawing = false; });
     drawCanvas.addEventListener('pointerleave', () => { drawing = false; });
-  })();
-  drawClearBtn.addEventListener('click', () => {
-    const ctx = drawCanvas.getContext('2d');
-    ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-  });
+    drawClearBtn.addEventListener('click', () => ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height));
 
-  /* ----- typed signature preview ----- */
-  function updateTypePreview() {
-    typePreview.textContent = typeText.value || 'Your name';
-    typePreview.style.fontFamily = typeFontSelect.value;
-    typePreview.style.color = typeColorInput.value;
-  }
-  typeText.addEventListener('input', updateTypePreview);
-  typeFontSelect.addEventListener('change', updateTypePreview);
-  typeColorInput.addEventListener('input', updateTypePreview);
-  updateTypePreview();
+    function updateTypePreview() {
+      typePreview.textContent = typeText.value || defaultPreviewText;
+      typePreview.style.fontFamily = typeFontSelect.value;
+      typePreview.style.color = typeColorInput.value;
+    }
+    typeText.addEventListener('input', updateTypePreview);
+    typeFontSelect.addEventListener('change', updateTypePreview);
+    typeColorInput.addEventListener('input', updateTypePreview);
+    updateTypePreview();
 
-  async function ensureFontLoaded(cssFamily, size) {
-    const primary = cssFamily.split(',')[0].trim().replace(/^['"]|['"]$/g, '');
-    try {
-      await document.fonts.load(size + 'px "' + primary + '"');
-      await document.fonts.ready;
-    } catch (e) { /* best effort; falls back to default font if it fails */ }
-  }
+    async function ensureFontLoaded(cssFamily, size) {
+      const primary = cssFamily.split(',')[0].trim().replace(/^['"]|['"]$/g, '');
+      try {
+        await document.fonts.load(size + 'px "' + primary + '"');
+        await document.fonts.ready;
+      } catch (e) { /* best effort; falls back to default font if it fails */ }
+    }
 
-  async function renderTypedSignaturePng(text, cssFamily, color) {
-    await ensureFontLoaded(cssFamily, 64);
-    const measureCanvas = document.createElement('canvas');
-    let ctx = measureCanvas.getContext('2d');
-    ctx.font = '64px ' + cssFamily;
-    const textW = ctx.measureText(text).width;
-    const padding = 24;
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(120, Math.ceil(textW) + padding * 2);
-    canvas.height = 200;
-    ctx = canvas.getContext('2d');
-    ctx.font = '64px ' + cssFamily;
-    ctx.fillStyle = color;
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(text, padding, 130);
-    return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
-  }
+    async function renderTypedPng(text, cssFamily, color) {
+      await ensureFontLoaded(cssFamily, 64);
+      const measureCanvas = document.createElement('canvas');
+      let mctx = measureCanvas.getContext('2d');
+      mctx.font = '64px ' + cssFamily;
+      const textW = mctx.measureText(text).width;
+      const padding = 24;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(120, Math.ceil(textW) + padding * 2);
+      canvas.height = 200;
+      const c2 = canvas.getContext('2d');
+      c2.font = '64px ' + cssFamily;
+      c2.fillStyle = color;
+      c2.textBaseline = 'alphabetic';
+      c2.fillText(text, padding, 130);
+      return { dataUrl: canvas.toDataURL('image/png'), width: canvas.width, height: canvas.height };
+    }
 
-  /* ----- "use this signature" ----- */
-  useSignatureBtn.addEventListener('click', async () => {
-    errorEl.textContent = '';
-    try {
+    async function getResult() {
       if (currentMode === 'draw') {
-        const ctx = drawCanvas.getContext('2d');
         const imgData = ctx.getImageData(0, 0, drawCanvas.width, drawCanvas.height);
         let hasInk = false;
         for (let i = 3; i < imgData.data.length; i += 4) { if (imgData.data[i] > 0) { hasInk = true; break; } }
-        if (!hasInk) throw new Error('Please draw your signature first.');
-        signatureDataUrl = drawCanvas.toDataURL('image/png');
-        signatureAspect = drawCanvas.width / drawCanvas.height;
+        if (!hasInk) throw new Error('Please draw first.');
+        return { dataUrl: drawCanvas.toDataURL('image/png'), aspect: drawCanvas.width / drawCanvas.height };
       } else if (currentMode === 'type') {
-        if (!typeText.value.trim()) throw new Error('Please type your name first.');
-        const result = await renderTypedSignaturePng(typeText.value, typeFontSelect.value, typeColorInput.value);
-        signatureDataUrl = result.dataUrl;
-        signatureAspect = result.width / result.height;
+        if (!typeText.value.trim()) throw new Error('Please type some text first.');
+        const result = await renderTypedPng(typeText.value, typeFontSelect.value, typeColorInput.value);
+        return { dataUrl: result.dataUrl, aspect: result.width / result.height };
       } else {
         const file = uploadFileInput.files && uploadFileInput.files[0];
         if (!file) throw new Error('Please choose an image first.');
         const dataUrl = await readFileAsDataURL(file);
         const img = await loadImageEl(dataUrl);
-        signatureDataUrl = dataUrl;
-        signatureAspect = img.width / img.height;
+        return { dataUrl: dataUrl, aspect: img.width / img.height };
       }
-      placement = null;
-      placeSection.style.display = 'block';
-      goSection.style.display = 'block';
+    }
+
+    return { getResult };
+  }
+
+  const signatureCreator = setupCreator('sign', 'Your name');
+  const paraphCreator = setupCreator('paraph', 'In.');
+
+  document.getElementById('sign-useSignatureBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('sign-createStatus');
+    errorEl.textContent = '';
+    try {
+      const result = await signatureCreator.getResult();
+      signatureDataUrl = result.dataUrl;
+      signatureAspect = result.aspect;
+      statusEl.textContent = 'Signature ready — click the page below to place it.';
       await renderCurrentPage();
-      status.textContent = 'Click on the page below to place your signature.';
     } catch (err) {
+      statusEl.textContent = '';
       errorEl.textContent = err.message;
     }
   });
 
-  function loadImageEl(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Could not load image'));
-      img.src = src;
-    });
-  }
+  document.getElementById('paraph-useSignatureBtn').addEventListener('click', async () => {
+    const statusEl = document.getElementById('paraph-createStatus');
+    errorEl.textContent = '';
+    try {
+      const result = await paraphCreator.getResult();
+      paraphDataUrl = result.dataUrl;
+      paraphAspect = result.aspect;
+      statusEl.textContent = 'Paraph ready — enable it in step 4 below.';
+      paraphEnable.checked = true;
+    } catch (err) {
+      statusEl.textContent = '';
+      errorEl.textContent = err.message;
+    }
+  });
 
-  /* ----- page navigation & placement stage ----- */
-  sizeInput.addEventListener('input', () => { sizeVal.textContent = sizeInput.value; updatePlacementSize(); drawStageOverlay(); });
+  /* ---------- placement stage ---------- */
+  sizeInput.addEventListener('input', () => { sizeVal.textContent = sizeInput.value; updatePendingSize(); drawStageOverlay(); });
+  rotationInput.addEventListener('input', () => { rotationVal.textContent = rotationInput.value; if (pending) pending.rotationDeg = parseFloat(rotationInput.value); drawStageOverlay(); });
 
   async function renderCurrentPage() {
     stage.innerHTML = '';
@@ -2685,48 +3110,70 @@ function baseName(filename) {
     pageIndicator.textContent = 'Page ' + currentPage + ' of ' + numPages;
 
     canvas.addEventListener('click', (e) => {
+      if (!signatureDataUrl) { errorEl.textContent = 'Create a signature above first.'; return; }
+      errorEl.textContent = '';
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left, y = e.clientY - rect.top;
       const width = viewport.width * (parseInt(sizeInput.value, 10) / 100);
       const height = width / signatureAspect;
-      placement = { pageNum: currentPage, x: x - width / 2, y: y - height / 2, width: width, height: height };
+      pending = {
+        pageNum: currentPage, x: x - width / 2, y: y - height / 2, width: width, height: height,
+        rotationDeg: parseFloat(rotationInput.value), vpWidth: viewport.width, vpHeight: viewport.height
+      };
       drawStageOverlay();
     });
 
     drawStageOverlay();
   }
 
-  function updatePlacementSize() {
-    if (!placement || placement.pageNum !== currentPage) return;
+  function updatePendingSize() {
+    if (!pending || pending.pageNum !== currentPage) return;
     const vp = pageViewportCache[currentPage];
     const width = vp.width * (parseInt(sizeInput.value, 10) / 100);
     const height = width / signatureAspect;
-    const cx = placement.x + placement.width / 2, cy = placement.y + placement.height / 2;
-    placement.width = width; placement.height = height;
-    placement.x = cx - width / 2; placement.y = cy - height / 2;
+    const cx = pending.x + pending.width / 2, cy = pending.y + pending.height / 2;
+    pending.width = width; pending.height = height;
+    pending.x = cx - width / 2; pending.y = cy - height / 2;
   }
 
   function drawStageOverlay() {
-    stage.querySelectorAll('.sigImg').forEach((el) => el.remove());
-    if (!placement || placement.pageNum !== currentPage || !signatureDataUrl) return;
+    stage.querySelectorAll('.sigImg, .sigAdded').forEach((el) => el.remove());
+    // faint markers for already-added placements on this page
+    placements.filter((p) => p.pageNum === currentPage).forEach((p) => {
+      const marker = document.createElement('img');
+      marker.className = 'sigAdded';
+      marker.src = signatureDataUrl;
+      marker.style.position = 'absolute';
+      marker.style.left = p.x + 'px';
+      marker.style.top = p.y + 'px';
+      marker.style.width = p.width + 'px';
+      marker.style.height = p.height + 'px';
+      marker.style.opacity = '0.55';
+      marker.style.pointerEvents = 'none';
+      marker.style.transform = 'rotate(' + p.rotationDeg + 'deg)';
+      stage.appendChild(marker);
+    });
+    if (!pending || pending.pageNum !== currentPage || !signatureDataUrl) return;
     const img = document.createElement('img');
     img.className = 'sigImg';
     img.src = signatureDataUrl;
     img.style.position = 'absolute';
-    img.style.left = placement.x + 'px';
-    img.style.top = placement.y + 'px';
-    img.style.width = placement.width + 'px';
-    img.style.height = placement.height + 'px';
+    img.style.left = pending.x + 'px';
+    img.style.top = pending.y + 'px';
+    img.style.width = pending.width + 'px';
+    img.style.height = pending.height + 'px';
     img.style.cursor = 'move';
+    img.style.transform = 'rotate(' + pending.rotationDeg + 'deg)';
+    img.style.outline = '2px dashed #2b6cb0';
     let dragging = false, offX = 0, offY = 0;
     img.addEventListener('mousedown', (e) => { dragging = true; offX = e.clientX; offY = e.clientY; e.stopPropagation(); });
     window.addEventListener('mousemove', (e) => {
       if (!dragging) return;
       const dx = e.clientX - offX, dy = e.clientY - offY;
       offX = e.clientX; offY = e.clientY;
-      placement.x += dx; placement.y += dy;
-      img.style.left = placement.x + 'px';
-      img.style.top = placement.y + 'px';
+      pending.x += dx; pending.y += dy;
+      img.style.left = pending.x + 'px';
+      img.style.top = pending.y + 'px';
     });
     window.addEventListener('mouseup', () => { dragging = false; });
     stage.appendChild(img);
@@ -2735,33 +3182,105 @@ function baseName(filename) {
   prevPageBtn.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await renderCurrentPage(); } });
   nextPageBtn.addEventListener('click', async () => { if (currentPage < numPages) { currentPage++; await renderCurrentPage(); } });
 
-  /* ----- apply & download ----- */
+  addPlacementBtn.addEventListener('click', () => {
+    errorEl.textContent = '';
+    if (!signatureDataUrl) { errorEl.textContent = 'Create a signature above first.'; return; }
+    if (!pending) { errorEl.textContent = 'Click on the page first to position the signature.'; return; }
+    placements.push(Object.assign({}, pending));
+    renderPlacementList();
+    drawStageOverlay();
+    status.textContent = 'Added — you can place another, or move to a different page.';
+  });
+
+  function renderPlacementList() {
+    placementList.innerHTML = '';
+    placements.forEach((p, idx) => {
+      const li = document.createElement('li');
+      const span = document.createElement('span');
+      span.className = 'fname';
+      span.textContent = 'Signature on page ' + p.pageNum + (p.rotationDeg ? ' (rotated ' + p.rotationDeg + '°)' : '');
+      const rm = document.createElement('button');
+      rm.className = 'btn small secondary';
+      rm.textContent = '✕ Remove';
+      rm.addEventListener('click', () => { placements.splice(idx, 1); renderPlacementList(); drawStageOverlay(); });
+      li.appendChild(span);
+      li.appendChild(rm);
+      placementList.appendChild(li);
+    });
+  }
+
+  /* ---------- paraph controls ---------- */
+  paraphSizeInput.addEventListener('input', () => paraphSizeVal.textContent = paraphSizeInput.value);
+  paraphRotationInput.addEventListener('input', () => paraphRotationVal.textContent = paraphRotationInput.value);
+  paraphOpacityInput.addEventListener('input', () => paraphOpacityVal.textContent = paraphOpacityInput.value);
+
+  function computeWatermarkPosition(mode, pageW, pageH, itemW, itemH) {
+    const margin = 30;
+    switch (mode) {
+      case 'top-left': return { x: margin, y: pageH - margin - itemH };
+      case 'top-right': return { x: pageW - margin - itemW, y: pageH - margin - itemH };
+      case 'bottom-left': return { x: margin, y: margin };
+      case 'bottom-right': return { x: pageW - margin - itemW, y: margin };
+      case 'center':
+      default: return { x: pageW / 2 - itemW / 2, y: pageH / 2 - itemH / 2 };
+    }
+  }
+
+  /* ---------- apply & download ---------- */
   goBtn.addEventListener('click', async () => {
     errorEl.textContent = '';
     if (!originalBuf) { errorEl.textContent = 'Please choose a PDF first.'; return; }
-    if (!placement) { errorEl.textContent = 'Please place your signature on a page first.'; return; }
+    const wantsParaph = paraphEnable.checked;
+    if (!placements.length && !wantsParaph) {
+      errorEl.textContent = 'Add a signature to a page, or enable the paraph, first.';
+      return;
+    }
     goBtn.disabled = true;
     status.textContent = 'Signing…';
     try {
       const doc = await loadPdfLibDoc(originalBuf.slice(0), { ignoreEncryption: true });
       const pages = doc.getPages();
-      const page = pages[placement.pageNum - 1];
-      const vp = pageViewportCache[placement.pageNum];
-      const pdfW = page.getWidth(), pdfH = page.getHeight();
-      const sx = pdfW / vp.width, sy = pdfH / vp.height;
 
-      const base64 = signatureDataUrl.split(',')[1];
-      const binary = atob(base64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      const embedded = await doc.embedPng(bytes);
+      if (placements.length) {
+        const base64 = signatureDataUrl.split(',')[1];
+        const binary = atob(base64);
+        const sigBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) sigBytes[i] = binary.charCodeAt(i);
+        const embeddedSig = await doc.embedPng(sigBytes);
 
-      page.drawImage(embedded, {
-        x: placement.x * sx,
-        y: pdfH - (placement.y + placement.height) * sy,
-        width: placement.width * sx,
-        height: placement.height * sy
-      });
+        for (const p of placements) {
+          const page = pages[p.pageNum - 1];
+          const viewport = await getSaveViewport(p.pageNum);
+          const placed = computePlacementInPdfSpace(viewport, p);
+          page.drawImage(embeddedSig, {
+            x: placed.x, y: placed.y, width: placed.width, height: placed.height,
+            rotate: PDFLib.degrees(placed.rotateDeg)
+          });
+        }
+      }
+
+      if (wantsParaph) {
+        if (!paraphDataUrl) throw new Error('Create a paraph above, or turn the paraph option off.');
+        const base64 = paraphDataUrl.split(',')[1];
+        const binary = atob(base64);
+        const parBytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) parBytes[i] = binary.charCodeAt(i);
+        const embeddedParaph = await doc.embedPng(parBytes);
+        const targetIndices = paraphPagesInput.value.trim()
+          ? parseFlatPageList(paraphPagesInput.value, pages.length)
+          : pages.map((_, i) => i).slice(0, Math.max(0, pages.length - 1));
+        const sizePct = parseFloat(paraphSizeInput.value) / 100;
+        const rotationDeg = parseFloat(paraphRotationInput.value);
+        const opacity = parseFloat(paraphOpacityInput.value);
+        targetIndices.forEach((idx) => {
+          const page = pages[idx];
+          const { width, height } = page.getSize();
+          const itemW = width * sizePct;
+          const itemH = itemW * (embeddedParaph.height / embeddedParaph.width);
+          const pos = computeWatermarkPosition(paraphPositionSelect.value, width, height, itemW, itemH);
+          page.drawImage(embeddedParaph, { x: pos.x, y: pos.y, width: itemW, height: itemH, opacity: opacity, rotate: PDFLib.degrees(rotationDeg) });
+        });
+      }
 
       const outBytes = await doc.save();
       downloadBytes(outBytes, baseFilename + '-signed.pdf', 'application/pdf');
@@ -2926,6 +3445,447 @@ function baseName(filename) {
   downloadTxtBtn.addEventListener('click', () => {
     if (!lastExtractedText) return;
     downloadBytes(lastExtractedText, baseFilename + '-ocr.txt', 'text/plain');
+  });
+})();
+</script>
+
+<script>
+(function () {
+  const dropzone = document.getElementById('auth-dropzone');
+  const fileInput = document.getElementById('auth-fileInput');
+  const loadStatus = document.getElementById('auth-loadStatus');
+  const optionsSection = document.getElementById('auth-optionsSection');
+  const goSection = document.getElementById('auth-goSection');
+
+  const modeTextBtn = document.getElementById('auth-mode-text');
+  const modeFileBtn = document.getElementById('auth-mode-file');
+  const textArea = document.getElementById('auth-textArea');
+  const fileArea = document.getElementById('auth-fileArea');
+  const textInput = document.getElementById('auth-textInput');
+  const fileInputMsg = document.getElementById('auth-fileInputMsg');
+  const dpiInput = document.getElementById('auth-dpi');
+  const dpiVal = document.getElementById('auth-dpiVal');
+
+  const goBtn = document.getElementById('auth-goBtn');
+  const status = document.getElementById('auth-status');
+  const errorEl = document.getElementById('auth-error');
+
+  let originalBuf = null;
+  let baseFilename = 'document';
+  let msgMode = 'text';
+
+  setupDropzone(dropzone, fileInput, (files) => loadFile(files[0]));
+
+  function setMsgMode(mode) {
+    msgMode = mode;
+    modeTextBtn.style.outline = mode === 'text' ? '2px solid #2b6cb0' : '';
+    modeFileBtn.style.outline = mode === 'file' ? '2px solid #2b6cb0' : '';
+    textArea.style.display = mode === 'text' ? 'block' : 'none';
+    fileArea.style.display = mode === 'file' ? 'block' : 'none';
+  }
+  modeTextBtn.addEventListener('click', () => setMsgMode('text'));
+  modeFileBtn.addEventListener('click', () => setMsgMode('file'));
+  setMsgMode('text');
+
+  dpiInput.addEventListener('input', () => dpiVal.textContent = dpiInput.value);
+
+  async function loadFile(file) {
+    if (!file) return;
+    errorEl.textContent = '';
+    loadStatus.textContent = 'Loading…';
+    optionsSection.style.display = 'none';
+    goSection.style.display = 'none';
+    try {
+      baseFilename = baseName(file.name);
+      originalBuf = await readFileAsArrayBuffer(file);
+      const pdfJsDoc = await loadPdfJsDoc(originalBuf.slice(0));
+      loadStatus.textContent = pdfJsDoc.numPages + ' page(s) loaded.';
+      optionsSection.style.display = 'block';
+      goSection.style.display = 'block';
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = 'Could not open this PDF (' + err.message + ').';
+      loadStatus.textContent = '';
+    }
+  }
+
+  async function getMessageText() {
+    if (msgMode === 'text') {
+      const t = textInput.value;
+      if (!t.trim()) throw new Error('Type or paste a base64 message first.');
+      return t.trim();
+    }
+    const file = fileInputMsg.files && fileInputMsg.files[0];
+    if (!file) throw new Error('Choose a .txt file containing the base64 message first.');
+    const t = await file.text();
+    if (!t.trim()) throw new Error('That file appears to be empty.');
+    return t.trim();
+  }
+
+  /* ---------- pure-JS SHA-256 (no dependency on Web Crypto's secure-context requirement) ---------- */
+  function sha256(bytes) {
+    const K = [
+      0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+      0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+      0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+      0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+      0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+      0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+      0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+      0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+    ];
+    let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    const len = bytes.length;
+    const bitLenHi = Math.floor(len / 0x20000000);
+    const bitLenLo = (len << 3) >>> 0;
+    const withOne = len + 1;
+    const padLen = (withOne % 64 <= 56) ? (56 - (withOne % 64)) : (120 - (withOne % 64));
+    const totalLen = withOne + padLen + 8;
+    const msg = new Uint8Array(totalLen);
+    msg.set(bytes, 0);
+    msg[len] = 0x80;
+    msg[totalLen-8]=(bitLenHi>>>24)&0xff; msg[totalLen-7]=(bitLenHi>>>16)&0xff;
+    msg[totalLen-6]=(bitLenHi>>>8)&0xff; msg[totalLen-5]=bitLenHi&0xff;
+    msg[totalLen-4]=(bitLenLo>>>24)&0xff; msg[totalLen-3]=(bitLenLo>>>16)&0xff;
+    msg[totalLen-2]=(bitLenLo>>>8)&0xff; msg[totalLen-1]=bitLenLo&0xff;
+    const w = new Uint32Array(64);
+    function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+    for (let chunk = 0; chunk < totalLen; chunk += 64) {
+      for (let i = 0; i < 16; i++) {
+        const o = chunk + i * 4;
+        w[i] = ((msg[o] << 24) | (msg[o+1] << 16) | (msg[o+2] << 8) | (msg[o+3])) >>> 0;
+      }
+      for (let i = 16; i < 64; i++) {
+        const s0 = rotr(w[i-15], 7) ^ rotr(w[i-15], 18) ^ (w[i-15] >>> 3);
+        const s1 = rotr(w[i-2], 17) ^ rotr(w[i-2], 19) ^ (w[i-2] >>> 10);
+        w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
+      }
+      let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+      for (let i = 0; i < 64; i++) {
+        const S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+        const ch = (e & f) ^ (~e & g);
+        const temp1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
+        const S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const temp2 = (S0 + maj) >>> 0;
+        h=g; g=f; f=e; e=(d+temp1)>>>0;
+        d=c; c=b; b=a; a=(temp1+temp2)>>>0;
+      }
+      H[0]=(H[0]+a)>>>0; H[1]=(H[1]+b)>>>0; H[2]=(H[2]+c)>>>0; H[3]=(H[3]+d)>>>0;
+      H[4]=(H[4]+e)>>>0; H[5]=(H[5]+f)>>>0; H[6]=(H[6]+g)>>>0; H[7]=(H[7]+h)>>>0;
+    }
+    const out = new Uint8Array(32);
+    for (let i = 0; i < 8; i++) {
+      out[i*4]=(H[i]>>>24)&0xff; out[i*4+1]=(H[i]>>>16)&0xff; out[i*4+2]=(H[i]>>>8)&0xff; out[i*4+3]=H[i]&0xff;
+    }
+    return out;
+  }
+
+  function concatBytes(a, b) {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a, 0); out.set(b, a.length);
+    return out;
+  }
+
+  // Embeds [4-byte length][message][32-byte SHA-256 hash] into the first N slots
+  // of rgbBytes (one bit per byte's LSB). The hash covers the message PLUS every
+  // byte of the image that comes AFTER the used region — so tampering with
+  // either the message or any untouched pixel in the page breaks verification,
+  // while tampering with the small used region itself corrupts the extracted
+  // hash/message and is caught the same way. This is what makes "Authentify"
+  // able to detect that a file was modified after being authenticated.
+  function embedBitsInRGB(rgbBytes, messageBytes) {
+    const HASH_LEN = 32;
+    const totalPayloadBytes = 4 + messageBytes.length + HASH_LEN;
+    const usedSlots = totalPayloadBytes * 8;
+    if (usedSlots > rgbBytes.length) {
+      throw new Error('Message is too large to fit at this resolution (needs ' + totalPayloadBytes + ' bytes of hiding capacity per page, has ' + Math.floor(rgbBytes.length / 8) + '). Try a higher DPI or a shorter message.');
+    }
+    const remainder = rgbBytes.subarray(usedSlots);
+    const hashBytes = sha256(concatBytes(messageBytes, remainder));
+
+    const header = new Uint8Array(4);
+    const len = messageBytes.length;
+    header[0] = (len >>> 24) & 0xff;
+    header[1] = (len >>> 16) & 0xff;
+    header[2] = (len >>> 8) & 0xff;
+    header[3] = len & 0xff;
+    const full = new Uint8Array(totalPayloadBytes);
+    full.set(header, 0);
+    full.set(messageBytes, 4);
+    full.set(hashBytes, 4 + messageBytes.length);
+
+    for (let bitIndex = 0; bitIndex < usedSlots; bitIndex++) {
+      const byteIdx = bitIndex >> 3;
+      const bitInByte = 7 - (bitIndex & 7);
+      const bit = (full[byteIdx] >> bitInByte) & 1;
+      rgbBytes[bitIndex] = (rgbBytes[bitIndex] & 0xFE) | bit;
+    }
+  }
+
+  goBtn.addEventListener('click', async () => {
+    errorEl.textContent = '';
+    if (!originalBuf) { errorEl.textContent = 'Please choose a PDF first.'; return; }
+    goBtn.disabled = true;
+    status.textContent = 'Preparing…';
+    try {
+      const messageStr = await getMessageText();
+      const messageBytes = new TextEncoder().encode(messageStr);
+      const dpi = parseInt(dpiInput.value, 10);
+      const scale = dpi / 72;
+
+      const pdfJsDoc = await loadPdfJsDoc(originalBuf.slice(0));
+      const outDoc = await PDFLib.PDFDocument.create();
+
+      for (let i = 1; i <= pdfJsDoc.numPages; i++) {
+        status.textContent = 'Processing page ' + i + ' of ' + pdfJsDoc.numPages + '…';
+        const pdfJsPage = await pdfJsDoc.getPage(i);
+        const baseViewport = pdfJsPage.getViewport({ scale: 1 });
+        const renderViewport = pdfJsPage.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(renderViewport.width));
+        canvas.height = Math.max(1, Math.round(renderViewport.height));
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        await pdfJsPage.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixelCount = canvas.width * canvas.height;
+        const rgbBytes = new Uint8Array(pixelCount * 3);
+        for (let p = 0, s = 0; p < pixelCount; p++, s += 3) {
+          const d = p * 4;
+          rgbBytes[s] = imageData.data[d];
+          rgbBytes[s + 1] = imageData.data[d + 1];
+          rgbBytes[s + 2] = imageData.data[d + 2];
+        }
+
+        embedBitsInRGB(rgbBytes, messageBytes);
+
+        const imgStream = outDoc.context.flateStream(rgbBytes, {
+          Type: 'XObject', Subtype: 'Image',
+          Width: canvas.width, Height: canvas.height,
+          ColorSpace: 'DeviceRGB', BitsPerComponent: 8
+        });
+        const imgRef = outDoc.context.register(imgStream);
+
+        const page = outDoc.addPage([baseViewport.width, baseViewport.height]);
+        const xobjName = page.node.newXObject('Im', imgRef);
+        page.pushOperators(
+          PDFLib.pushGraphicsState(),
+          PDFLib.translate(0, 0),
+          PDFLib.scale(baseViewport.width, baseViewport.height),
+          PDFLib.drawObject(xobjName),
+          PDFLib.popGraphicsState()
+        );
+      }
+
+      status.textContent = 'Saving…';
+      const outBytes = await outDoc.save();
+      downloadBytes(outBytes, baseFilename + '-authenticated.pdf', 'application/pdf');
+      status.textContent = 'Done.';
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = err.message || 'Something went wrong.';
+      status.textContent = '';
+    } finally {
+      goBtn.disabled = false;
+    }
+  });
+})();
+</script>
+
+<script>
+(function () {
+  const dropzone = document.getElementById('authread-dropzone');
+  const fileInput = document.getElementById('authread-fileInput');
+  const status = document.getElementById('authread-status');
+  const errorEl = document.getElementById('authread-error');
+  const resultSection = document.getElementById('authread-resultSection');
+  const resultBox = document.getElementById('authread-result');
+  const downloadBtn = document.getElementById('authread-downloadBtn');
+
+  let baseFilename = 'document';
+  let lastMessage = '';
+
+  setupDropzone(dropzone, fileInput, (files) => loadFile(files[0]));
+
+  /* ---------- pure-JS SHA-256 (must match the one used by Authenticate PDF) ---------- */
+  function sha256(bytes) {
+    const K = [
+      0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+      0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+      0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+      0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+      0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+      0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+      0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+      0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+    ];
+    let H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    const len = bytes.length;
+    const bitLenHi = Math.floor(len / 0x20000000);
+    const bitLenLo = (len << 3) >>> 0;
+    const withOne = len + 1;
+    const padLen = (withOne % 64 <= 56) ? (56 - (withOne % 64)) : (120 - (withOne % 64));
+    const totalLen = withOne + padLen + 8;
+    const msg = new Uint8Array(totalLen);
+    msg.set(bytes, 0);
+    msg[len] = 0x80;
+    msg[totalLen-8]=(bitLenHi>>>24)&0xff; msg[totalLen-7]=(bitLenHi>>>16)&0xff;
+    msg[totalLen-6]=(bitLenHi>>>8)&0xff; msg[totalLen-5]=bitLenHi&0xff;
+    msg[totalLen-4]=(bitLenLo>>>24)&0xff; msg[totalLen-3]=(bitLenLo>>>16)&0xff;
+    msg[totalLen-2]=(bitLenLo>>>8)&0xff; msg[totalLen-1]=bitLenLo&0xff;
+    const w = new Uint32Array(64);
+    function rotr(x, n) { return (x >>> n) | (x << (32 - n)); }
+    for (let chunk = 0; chunk < totalLen; chunk += 64) {
+      for (let i = 0; i < 16; i++) {
+        const o = chunk + i * 4;
+        w[i] = ((msg[o] << 24) | (msg[o+1] << 16) | (msg[o+2] << 8) | (msg[o+3])) >>> 0;
+      }
+      for (let i = 16; i < 64; i++) {
+        const s0 = rotr(w[i-15], 7) ^ rotr(w[i-15], 18) ^ (w[i-15] >>> 3);
+        const s1 = rotr(w[i-2], 17) ^ rotr(w[i-2], 19) ^ (w[i-2] >>> 10);
+        w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0;
+      }
+      let a=H[0],b=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+      for (let i = 0; i < 64; i++) {
+        const S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25);
+        const ch = (e & f) ^ (~e & g);
+        const temp1 = (h + S1 + ch + K[i] + w[i]) >>> 0;
+        const S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22);
+        const maj = (a & b) ^ (a & c) ^ (b & c);
+        const temp2 = (S0 + maj) >>> 0;
+        h=g; g=f; f=e; e=(d+temp1)>>>0;
+        d=c; c=b; b=a; a=(temp1+temp2)>>>0;
+      }
+      H[0]=(H[0]+a)>>>0; H[1]=(H[1]+b)>>>0; H[2]=(H[2]+c)>>>0; H[3]=(H[3]+d)>>>0;
+      H[4]=(H[4]+e)>>>0; H[5]=(H[5]+f)>>>0; H[6]=(H[6]+g)>>>0; H[7]=(H[7]+h)>>>0;
+    }
+    const out = new Uint8Array(32);
+    for (let i = 0; i < 8; i++) {
+      out[i*4]=(H[i]>>>24)&0xff; out[i*4+1]=(H[i]>>>16)&0xff; out[i*4+2]=(H[i]>>>8)&0xff; out[i*4+3]=H[i]&0xff;
+    }
+    return out;
+  }
+
+  function concatBytes(a, b) {
+    const out = new Uint8Array(a.length + b.length);
+    out.set(a, 0); out.set(b, a.length);
+    return out;
+  }
+
+  function bytesEqual(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+    return true;
+  }
+
+  // Extracts [4-byte length][message][32-byte hash] and independently recomputes
+  // the hash over (extracted message + untouched remainder of the image) to
+  // check it still matches. Any change to the message OR to any pixel elsewhere
+  // in the page since authentication will make the hashes disagree.
+  function extractBitsFromRGB(rgbBytes) {
+    const HASH_LEN = 32;
+    if (rgbBytes.length < (4 + HASH_LEN) * 8) throw new Error('This image is too small to contain a hidden message.');
+    function readByte(bitOffset) {
+      let byte = 0;
+      for (let b = 0; b < 8; b++) byte = (byte << 1) | (rgbBytes[bitOffset + b] & 1);
+      return byte;
+    }
+    let len = 0;
+    for (let i = 0; i < 4; i++) len = len * 256 + readByte(i * 8);
+    const totalPayloadBytes = 4 + len + HASH_LEN;
+    const usedSlots = totalPayloadBytes * 8;
+    if (!Number.isFinite(len) || len < 0 || usedSlots > rgbBytes.length) {
+      throw new Error('No hidden message found on this page.');
+    }
+    const message = new Uint8Array(len);
+    for (let i = 0; i < len; i++) message[i] = readByte((4 + i) * 8);
+    const embeddedHash = new Uint8Array(HASH_LEN);
+    for (let i = 0; i < HASH_LEN; i++) embeddedHash[i] = readByte((4 + len + i) * 8);
+
+    const remainder = rgbBytes.subarray(usedSlots);
+    const actualHash = sha256(concatBytes(message, remainder));
+    const verified = bytesEqual(embeddedHash, actualHash);
+
+    return { message, verified };
+  }
+
+  async function getPageImageRGB(doc, page) {
+    const resources = page.node.Resources ? page.node.Resources() : null;
+    const xobjDict = resources ? resources.lookupMaybe(PDFLib.PDFName.of('XObject'), PDFLib.PDFDict) : null;
+    if (!xobjDict) return null;
+    const keys = xobjDict.keys();
+    for (const key of keys) {
+      let obj;
+      try { obj = doc.context.lookup(xobjDict.get(key)); } catch (e) { continue; }
+      if (!obj || !obj.dict) continue;
+      if (obj.dict.get(PDFLib.PDFName.of('Subtype')) !== PDFLib.PDFName.of('Image')) continue;
+      const widthObj = obj.dict.get(PDFLib.PDFName.of('Width'));
+      const heightObj = obj.dict.get(PDFLib.PDFName.of('Height'));
+      const width = widthObj && widthObj.asNumber ? widthObj.asNumber() : Number(widthObj);
+      const height = heightObj && heightObj.asNumber ? heightObj.asNumber() : Number(heightObj);
+      const filter = obj.dict.get(PDFLib.PDFName.of('Filter'));
+      const raw = obj.getContents ? obj.getContents() : obj.contents;
+      let bytes = raw;
+      if (filter && filter.toString && filter.toString().includes('FlateDecode')) {
+        try { bytes = fflate.unzlibSync(raw); } catch (e) { continue; }
+      }
+      return { width, height, bytes };
+    }
+    return null;
+  }
+
+  async function loadFile(file) {
+    if (!file) return;
+    errorEl.textContent = '';
+    resultSection.style.display = 'none';
+    status.style.color = '';
+    status.textContent = 'Scanning…';
+    try {
+      baseFilename = baseName(file.name);
+      const buf = await readFileAsArrayBuffer(file);
+      const doc = await loadPdfLibDoc(buf, { ignoreEncryption: true });
+      const pages = doc.getPages();
+      let found = null;
+      for (let i = 0; i < pages.length; i++) {
+        status.textContent = 'Scanning page ' + (i + 1) + ' of ' + pages.length + '…';
+        const info = await getPageImageRGB(doc, pages[i]);
+        if (!info) continue;
+        try {
+          const result = extractBitsFromRGB(info.bytes);
+          if (result.verified) { found = result; break; }
+          // A message was structurally found but the hash didn't match — keep
+          // scanning other pages in case a *different* page verifies, but
+          // remember that we saw a tampered one in case nothing else does.
+          if (!found) found = result;
+        } catch (e) { /* try next page */ }
+      }
+      if (!found) {
+        status.textContent = 'No hidden message was found in this PDF.';
+        return;
+      }
+      lastMessage = new TextDecoder().decode(found.message);
+      resultBox.value = lastMessage;
+      resultSection.style.display = 'block';
+      if (found.verified) {
+        status.textContent = '✅ Verified — this file matches what was authenticated (no modifications detected).';
+        status.style.color = '';
+      } else {
+        status.textContent = '⚠️ Warning: this file does NOT match its authentication signature — it appears to have been modified after "Authenticate PDF" was applied. The message below may be unreliable.';
+        status.style.color = '#b03030';
+      }
+    } catch (err) {
+      console.error(err);
+      errorEl.textContent = 'Could not read this PDF (' + err.message + ').';
+      status.textContent = '';
+    }
+  }
+
+  downloadBtn.addEventListener('click', () => {
+    if (!lastMessage) return;
+    downloadBytes(lastMessage, baseFilename + '-hidden-message.txt', 'text/plain');
   });
 })();
 </script>
