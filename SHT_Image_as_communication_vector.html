@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hidden Signal — offline image steganography</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --card:#ffffff; --border:#dde3e8; --accent:#2b6cb0; --text:#222;
+    --success:#2e7d32; --secondary:#607d8b; --danger:#c62828;
+    --warnbg:#fff6e6; --warnborder:#f0d9a8; --warntext:#a15c00;
+    --mono: Consolas, "Courier New", monospace;
+  }
+  *{ box-sizing:border-box; }
+  body{ font-family: "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--text); margin:0; padding:20px; }
+  a{ color: var(--accent); }
+  h1{ margin-top:0; font-size: 1.7em; }
+  .wrap{ max-width:1150px; margin:0 auto; padding:0; }
+
+  header.top{ margin-bottom:22px; }
+  .eyebrow{
+    font-size:12px; letter-spacing:0.06em; text-transform:uppercase;
+    color:var(--secondary); font-weight:600;
+  }
+  .lede{ color:#555; max-width:70ch; font-size:0.95em; }
+
+  .badges{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .badge{
+    font-size:11.5px; color:#555; border:1px solid var(--border);
+    background:#eef2f5; padding:4px 10px; border-radius:999px;
+  }
+
+  section.card{
+    background:var(--card); border:1px solid var(--border); border-radius:10px;
+    padding:18px 20px; margin-bottom:22px; box-shadow:0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card-head{ padding:0; }
+  .card-head h2{
+    margin-top:0; font-size:1.15em; border-bottom:1px solid var(--border);
+    padding-bottom:8px; margin-bottom:4px;
+  }
+  .card-head .sub{
+    display:block; font-weight:normal; color:#666; font-size:0.78em; margin-top:4px;
+  }
+  .step-num, .chev{ display:none; }
+  .card-body{ display:block !important; padding:4px 0 0; border-top:none; }
+
+  .field{ margin:14px 0; }
+  .field label{ display:block; font-weight:600; margin:0 0 5px; font-size:0.92em; }
+  .field .hint{ font-size:0.85em; color:#666; margin:4px 0 0; }
+
+  input[type="text"], input[type="password"], textarea, select{
+    width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:6px;
+    font-size:0.92em; font-family:inherit; background:#fff; color:var(--text); outline:none;
+  }
+  textarea{ font-family: var(--mono); min-height:90px; resize:vertical; }
+  input:focus, textarea:focus, select:focus, button:focus-visible, .filebtn:focus-visible, .tab:focus-visible{
+    border-color:var(--accent); box-shadow:0 0 0 3px rgba(43,108,176,0.15);
+  }
+
+  .row{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+  .row > .field{ flex:1; min-width:200px; }
+
+  .tabs{ display:flex; gap:8px; margin-bottom:14px; }
+  .tab{
+    font-size:0.85em; padding:7px 14px; border-radius:6px; border:1px solid var(--border);
+    background:#fff; color:#555; cursor:pointer;
+  }
+  .tab.active{ background:var(--accent); border-color:var(--accent); color:#fff; font-weight:600; }
+
+  .filebtn{
+    display:block; border:2px dashed var(--border); border-radius:10px; padding:16px;
+    text-align:center; cursor:pointer; width:100%; background:#fff;
+    transition:border-color .15s, background .15s;
+  }
+  .filebtn:hover{ border-color:var(--accent); background:#eef4fa; }
+  .filebtn strong{ display:block; color:var(--text); font-weight:600; }
+  .filebtn small{ display:block; color:#777; font-size:0.85em; margin-top:4px; }
+
+  .preview-img{
+    max-width:220px; max-height:220px; border:1px solid var(--border); border-radius:8px;
+    margin-top:12px; display:block; margin-left:auto; margin-right:auto;
+    background:repeating-conic-gradient(#eef1f4 0% 25%, #fff 0% 50%) 50% / 14px 14px;
+  }
+
+  .meter-label{
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-size:0.85em; color:#555; margin-bottom:6px;
+  }
+  .meter-label b{ color:var(--text); font-weight:600; }
+  .meter{
+    height:12px; border-radius:6px; background:#eef1f4; border:1px solid var(--border); overflow:hidden;
+  }
+  .meter-fill{ height:100%; width:0%; background:var(--accent); transition:width .2s ease, background .2s ease; }
+  .meter-fill.warn{ background:#e5a53a; }
+  .meter-fill.over{ background:var(--danger); }
+  .meter-overflow-tag{
+    font-size:0.82em; color:var(--warntext); background:var(--warnbg);
+    border:1px solid var(--warnborder); border-radius:6px; padding:6px 10px; margin-top:8px;
+  }
+
+  .checkline{
+    display:flex; align-items:flex-start; gap:8px; margin:12px 0 4px; font-size:0.9em; color:#333;
+  }
+  .checkline input{ width:16px; height:16px; margin-top:3px; accent-color:var(--accent); flex-shrink:0; }
+  .checkline b{ font-weight:600; }
+
+  button.action{
+    cursor:pointer; border:none; border-radius:6px; padding:9px 16px;
+    background:var(--accent); color:#fff; font-size:0.95em; font-weight:600; width:100%; margin-top:8px;
+  }
+  button.action:hover{ opacity:0.9; }
+  button.action:disabled{ background:#aab4bb; cursor:not-allowed; }
+  button.action.secondary{ background:var(--secondary); }
+
+  .status{ margin-top:14px; padding:10px 14px; border-radius:6px; font-size:0.9em; display:none; }
+  .status.show{ display:block; }
+  .status.ok{ background:#eaf5ec; border:1px solid #bfe0c4; color:var(--success); }
+  .status.err{ background:#fdecea; border:1px solid #f3c0bb; color:var(--danger); }
+  .status.info{ background:#eaf1fb; border:1px solid #c7dcf3; color:var(--accent); }
+
+  .result-actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; justify-content:center; }
+  .result-actions a.download{
+    font-size:0.9em; color:#fff; background:var(--success); padding:9px 16px;
+    border-radius:6px; text-decoration:none; font-weight:600;
+  }
+  .result-actions a.download:hover{ opacity:0.9; }
+
+  code.mono-inline{ font-family:var(--mono); background:#eef1f4; padding:1px 6px; border-radius:4px; font-size:0.85em; }
+
+  footer.credit{ text-align:center; margin:26px 0 10px; opacity:0.9; }
+  footer.credit img{ width:44px; height:auto; }
+  footer.credit .hint{ font-size:0.82em; color:#777; margin:8px auto 0; max-width:70ch; }
+
+  @media (max-width: 560px){
+    body{ padding:14px; }
+    .row{ flex-direction:column; }
+  }
+
+  .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div class="eyebrow">offline &middot; self-contained &middot; no server involved</div>
+    <h1>🔒 Hidden Signal <span class="dim">— image steganography</span></h1>
+    <p class="lede">
+      Hide an encrypted message inside the pixels of an image, or append it invisibly
+      after the image data. Everything below runs locally in this browser tab — nothing
+      is uploaded anywhere. Open this file with no internet connection and it works exactly the same.
+    </p>
+    <div class="badges">
+      <span class="badge">AES-256-GCM</span>
+      <span class="badge">SHA-512 key derivation</span>
+      <span class="badge">LSB pixel steganography</span>
+      <span class="badge">zero external requests</span>
+    </div>
+  </header>
+
+  <!-- STEP 0 — optional file encryption -->
+  <section class="card optional" id="card-file">
+    <div class="card-head" onclick="toggleCard('card-file')">
+      <h2>0. 🔑 Encrypt a file to text <span class="sub">optional — turns any file into a password-protected .base64.txt, or restores one</span></h2>
+    </div>
+    <div class="card-body">
+      <div class="tabs">
+        <button type="button" class="tab active" data-file-tab="encrypt" onclick="setFileTab('encrypt')">Encrypt a file</button>
+        <button type="button" class="tab" data-file-tab="restore" onclick="setFileTab('restore')">Restore a file</button>
+      </div>
+
+      <!-- encrypt sub-panel -->
+      <div id="file-encrypt-panel">
+        <div class="field">
+          <label>File to encrypt</label>
+          <label class="filebtn">
+            <input type="file" id="f0-file-input" class="sr-only" onchange="onF0FileChosen(event)">
+            <span>
+              <strong id="f0-file-name">📁 Choose a file…</strong>
+              <small id="f0-file-meta">any type, any size</small>
+            </span>
+          </label>
+        </div>
+        <div class="field">
+          <label for="f0-password">Password</label>
+          <input type="password" id="f0-password" placeholder="Used to derive an AES-256 key via SHA-512">
+          <div class="hint">This password is hashed (SHA-512) locally to build the encryption key — it is never stored or transmitted.</div>
+        </div>
+        <button class="action" onclick="doF0Encrypt()">🔑 Encrypt file &rarr; base64.txt</button>
+        <div class="status" id="f0-encrypt-status"></div>
+      </div>
+
+      <!-- restore sub-panel -->
+      <div id="file-restore-panel" style="display:none">
+        <div class="field">
+          <label>Encrypted .base64.txt file</label>
+          <label class="filebtn">
+            <input type="file" id="f0-restore-input" class="sr-only" accept=".txt,text/plain" onchange="onF0RestoreChosen(event)">
+            <span>
+              <strong id="f0-restore-name">📁 Choose a .base64.txt file…</strong>
+              <small id="f0-restore-meta">text file produced by the panel above</small>
+            </span>
+          </label>
+        </div>
+        <div class="field">
+          <label for="f0-restore-password">Password</label>
+          <input type="password" id="f0-restore-password" placeholder="Same password used to encrypt">
+        </div>
+        <button class="action secondary" onclick="doF0Restore()">♻️ Restore original file</button>
+        <div class="status" id="f0-restore-status"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 1 — hide -->
+  <section class="card open" id="card-hide">
+    <div class="card-head" onclick="toggleCard('card-hide')">
+      <h2>1. 🙈 Hide a message in an image <span class="sub">pick an image, choose how much of it to use, then embed your text</span></h2>
+    </div>
+    <div class="card-body">
+
+      <div class="field">
+        <label>Cover image (JPG or PNG)</label>
+        <label class="filebtn">
+          <input type="file" id="h-image-input" class="sr-only" accept="image/jpeg,image/png" onchange="onHideImageChosen(event)">
+          <span>
+            <strong id="h-image-name">📁 Choose an image…</strong>
+            <small id="h-image-meta">used only to compute available hiding space</small>
+          </span>
+        </label>
+        <img id="h-image-preview" class="preview-img" style="display:none">
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="h-bits">Bits used per colour channel byte</label>
+          <select id="h-bits" onchange="recomputeCapacity()">
+            <option value="0">0 — don't touch pixels, only append after the file</option>
+            <option value="1" selected>1 — invisible, lowest capacity</option>
+            <option value="2">2 — invisible in almost all images</option>
+            <option value="3">3 — occasionally visible in flat colours</option>
+            <option value="4">4 — highest capacity, can be visible</option>
+          </select>
+          <div class="hint" id="h-bits-hint">Higher values hide more data per pixel but risk faint visible noise.</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="meter-label"><span>Space used</span><b id="h-meter-text">0 / 0 bytes</b></div>
+        <div class="meter"><div class="meter-fill" id="h-meter-fill"></div></div>
+        <div class="meter-overflow-tag" id="h-overflow-tag" style="display:none"></div>
+      </div>
+
+      <div class="tabs">
+        <button type="button" class="tab active" data-msg-tab="text" onclick="setMsgTab('text')">Type a message</button>
+        <button type="button" class="tab" data-msg-tab="file" onclick="setMsgTab('file')">Use a text file</button>
+      </div>
+
+      <div id="msg-text-panel" class="field">
+        <label for="h-message-text">Message</label>
+        <textarea id="h-message-text" placeholder="Type the message to hide…" oninput="recomputeCapacity()"></textarea>
+      </div>
+      <div id="msg-file-panel" class="field" style="display:none">
+        <label>Text file to hide <span class="hint" style="display:inline">— e.g. the .base64.txt from step 0</span></label>
+        <label class="filebtn">
+          <input type="file" id="h-message-file" class="sr-only" accept=".txt,text/plain" onchange="onHideMessageFileChosen(event)">
+          <span>
+            <strong id="h-message-file-name">📁 Choose a text file…</strong>
+            <small id="h-message-file-meta">its raw text content becomes the hidden message</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="field">
+        <label for="h-password">Password for this message</label>
+        <input type="password" id="h-password" placeholder="Independent from the step 0 password" oninput="recomputeCapacity()">
+        <div class="hint">The message is AES-256-GCM encrypted with a key derived (SHA-512) from this password, then base64-encoded before hiding.</div>
+      </div>
+
+      <label class="checkline">
+        <input type="checkbox" id="h-overflow" onchange="recomputeCapacity()">
+        <span>If the message doesn't fit in the pixels, store the extra part <b>appended after the image</b> (extra bytes at the end of the file, invisible to image viewers, slightly larger file).</span>
+      </label>
+
+      <button class="action" id="h-generate-btn" onclick="doHide()">🙈 Hide message in image</button>
+      <div class="status" id="h-status"></div>
+      <div class="result-actions" id="h-result-actions" style="display:none"></div>
+    </div>
+  </section>
+
+  <!-- STEP 2 — reveal -->
+  <section class="card" id="card-reveal">
+    <div class="card-head" onclick="toggleCard('card-reveal')">
+      <h2>2. 🔍 Reveal a hidden message <span class="sub">upload a stego image, enter the same settings, get your message back</span></h2>
+    </div>
+    <div class="card-body">
+      <div class="field">
+        <label>Image containing a hidden message</label>
+        <label class="filebtn">
+          <input type="file" id="r-image-input" class="sr-only" accept="image/jpeg,image/png" onchange="onRevealImageChosen(event)">
+          <span>
+            <strong id="r-image-name">📁 Choose an image…</strong>
+            <small id="r-image-meta">the file produced by step 1</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="r-bits">Bits used per colour channel byte</label>
+          <select id="r-bits">
+            <option value="0">0 — data was only appended after the file</option>
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+          <div class="hint">Must match the value chosen when the message was hidden.</div>
+        </div>
+        <div class="field">
+          <label for="r-password">Password</label>
+          <input type="password" id="r-password" placeholder="Same password used to hide the message">
+        </div>
+      </div>
+
+      <button class="action" onclick="doReveal()">🔍 Reveal message</button>
+      <div class="status" id="r-status"></div>
+
+      <div class="field" id="r-output-field" style="display:none">
+        <label>Recovered message</label>
+        <textarea id="r-output" readonly></textarea>
+        <div class="result-actions">
+          <a class="download" id="r-download-link" style="display:none">Download as .txt</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer class="credit">
+  <img src="data:image/png;base64,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" alt="SHT - Standalone HTML Tools - Original source: https://github.com/Trottefox/SHT_StandaloneHTLMTools - https://creativecommons.org/licenses/by-nc/4.0/deed.fr">
+  <p class="hint">This tool is free to reuse and adapt but not for commercial use — please keep this credit if you build on it. Original source: <a href="https://github.com/Trottefox/SHT_StandaloneHTLMTools" target="_blank" rel="noopener">github.com/Trottefox/SHT_StandaloneHTLMTools</a> — <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.fr" target="_blank" rel="noopener">CC BY-NC 4.0</a></p>
+  <p class="hint">No third-party code: built only with the native Web Crypto API (AES-256-GCM, SHA-512) and the Canvas API. Least-significant-bit steganography and appending data after a JPEG's FF D9 / PNG's IEND marker are openly documented, public-domain techniques, not licensed code.</p>
+  <p class="hint">Made with the help of Anthropic's Claude</p>
+</footer>
+
+<script>
+'use strict';
+/* =========================================================================
+   Hidden Signal — offline image steganography
+   Single-file, no external dependencies. Every function below is pure
+   JS / native browser APIs (Web Crypto, Canvas, Blob, FileReader).
+   ========================================================================= */
+
+const subtle = window.crypto.subtle;
+
+/* ---------------------------- crypto helpers ---------------------------- */
+
+async function deriveKeyFromPassword(password) {
+  const enc = new TextEncoder().encode(password);
+  const hash = await subtle.digest('SHA-512', enc); // 64 bytes
+  const keyMaterial = new Uint8Array(hash).slice(0, 32); // first 32 bytes -> AES-256 key
+  return subtle.importKey('raw', keyMaterial, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+
+async function encryptBytes(plainBytes, password) {
+  const key = await deriveKeyFromPassword(password);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const ct = await subtle.encrypt({ name: 'AES-GCM', iv }, key, plainBytes);
+  const out = new Uint8Array(iv.length + ct.byteLength);
+  out.set(iv, 0);
+  out.set(new Uint8Array(ct), iv.length);
+  return out;
+}
+
+async function decryptBytes(encBytes, password) {
+  const key = await deriveKeyFromPassword(password);
+  const iv = encBytes.slice(0, 12);
+  const ct = encBytes.slice(12);
+  const pt = await subtle.decrypt({ name: 'AES-GCM', iv }, key, ct);
+  return new Uint8Array(pt);
+}
+
+/* ------------------------------- base64 --------------------------------- */
+
+function bytesToBase64(bytes) {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return window.btoa(binary);
+}
+
+function base64ToBytes(b64) {
+  const binary = window.atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+}
+
+/* ----------------------------- uint32 helpers ---------------------------- */
+
+function uint32ToBytes(n) {
+  return new Uint8Array([(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff]);
+}
+function bytesToUint32(bytes, offset) {
+  offset = offset || 0;
+  return ((bytes[offset] << 24) | (bytes[offset + 1] << 16) | (bytes[offset + 2] << 8) | bytes[offset + 3]) >>> 0;
+}
+
+function concatBytes() {
+  const arrs = Array.prototype.slice.call(arguments);
+  let total = 0;
+  for (const a of arrs) total += a.length;
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrs) { out.set(a, off); off += a.length; }
+  return out;
+}
+
+/* --------------------- LSB embed/extract over RGBA pixels ---------------- */
+/* Only R,G,B channels are used; alpha is left untouched. Bits are written
+   MSB-first, bitsPerChannel bits at a time, sequentially across pixels. */
+
+function pixelCapacityBytes(numPixels, bitsPerChannel) {
+  if (bitsPerChannel <= 0) return 0;
+  const totalBits = numPixels * 3 * bitsPerChannel;
+  return Math.floor(totalBits / 8);
+}
+
+function embedLSB(pixelBytes, bitsPerChannel, dataBytes) {
+  const mask = (1 << bitsPerChannel) - 1;
+  const invMask = 0xff ^ mask;
+  let bitBuffer = 0, bitsInBuffer = 0, byteIndex = 0;
+  const totalBits = dataBytes.length * 8;
+  let bitsWritten = 0, pixelPos = 0;
+
+  while (bitsWritten < totalBits) {
+    while (bitsInBuffer < bitsPerChannel && byteIndex < dataBytes.length) {
+      bitBuffer = (bitBuffer << 8) | dataBytes[byteIndex++];
+      bitsInBuffer += 8;
+    }
+    if (bitsInBuffer < bitsPerChannel) {
+      bitBuffer = bitBuffer << (bitsPerChannel - bitsInBuffer);
+      bitsInBuffer = bitsPerChannel;
+    }
+    const shift = bitsInBuffer - bitsPerChannel;
+    const chunk = (bitBuffer >> shift) & mask;
+    bitsInBuffer -= bitsPerChannel;
+    bitBuffer &= (1 << bitsInBuffer) - 1 || 0;
+
+    if (pixelPos % 4 === 3) pixelPos++; // skip alpha
+    if (pixelPos >= pixelBytes.length) throw new Error('This image has no room left for the message at this bits-per-channel setting.');
+    pixelBytes[pixelPos] = (pixelBytes[pixelPos] & invMask) | chunk;
+    pixelPos++;
+    bitsWritten += bitsPerChannel;
+  }
+}
+
+function extractLSB(pixelBytes, bitsPerChannel, numBytesToExtract) {
+  const mask = (1 << bitsPerChannel) - 1;
+  const out = new Uint8Array(numBytesToExtract);
+  let bitBuffer = 0, bitsInBuffer = 0, outIndex = 0, pixelPos = 0;
+
+  while (outIndex < numBytesToExtract) {
+    if (pixelPos % 4 === 3) pixelPos++;
+    if (pixelPos >= pixelBytes.length) throw new Error('Reached the end of the image before finding the expected hidden data.');
+    const chunk = pixelBytes[pixelPos] & mask;
+    pixelPos++;
+    bitBuffer = (bitBuffer << bitsPerChannel) | chunk;
+    bitsInBuffer += bitsPerChannel;
+    if (bitsInBuffer >= 8) {
+      const shift = bitsInBuffer - 8;
+      out[outIndex++] = (bitBuffer >> shift) & 0xff;
+      bitsInBuffer -= 8;
+      bitBuffer &= (1 << bitsInBuffer) - 1 || 0;
+    }
+  }
+  return out;
+}
+
+/* ------------------- image container boundary detection ------------------ */
+/* Used to find where a JPEG/PNG's real image data ends, so we can safely
+   append (or read back) extra bytes after it — ignored by every viewer. */
+
+function findJPEGEOI(bytes) {
+  for (let i = 0; i < bytes.length - 1; i++) {
+    if (bytes[i] === 0xff && bytes[i + 1] === 0xd9) return i + 2;
+  }
+  return -1;
+}
+
+function findPNGIEND(bytes) {
+  const sig = [0x49, 0x45, 0x4e, 0x44]; // "IEND"
+  for (let i = 0; i < bytes.length - 3; i++) {
+    if (bytes[i] === sig[0] && bytes[i + 1] === sig[1] && bytes[i + 2] === sig[2] && bytes[i + 3] === sig[3]) {
+      return i + 4 + 4; // past "IEND" type field and its 4-byte CRC
+    }
+  }
+  return -1;
+}
+
+function findContainerBoundary(bytes) {
+  const j = findJPEGEOI(bytes);
+  if (j !== -1) return j;
+  const p = findPNGIEND(bytes);
+  if (p !== -1) return p;
+  return -1;
+}
+
+/* ------------------------------ misc helpers ----------------------------- */
+
+function readFileAsArrayBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('Could not read file.'));
+    r.readAsArrayBuffer(file);
+  });
+}
+function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('Could not read file.'));
+    r.readAsText(file);
+  });
+}
+function loadImageFromBytes(bytes, mimeHint) {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([bytes], { type: mimeHint || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not decode this as an image.')); };
+    img.src = url;
+  });
+}
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function humanBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / (1024 * 1024)).toFixed(2) + ' MB';
+}
+function setStatus(elId, kind, msg) {
+  const el = document.getElementById(elId);
+  el.className = 'status show ' + kind;
+  el.textContent = msg;
+}
+function clearStatus(elId) {
+  const el = document.getElementById(elId);
+  el.className = 'status';
+  el.textContent = '';
+}
+
+/* ------------------------------- UI: cards ------------------------------- */
+
+function toggleCard(id) {
+  document.getElementById(id).classList.toggle('open');
+}
+
+function setFileTab(which) {
+  document.querySelectorAll('[data-file-tab]').forEach(t => t.classList.toggle('active', t.dataset.fileTab === which));
+  document.getElementById('file-encrypt-panel').style.display = which === 'encrypt' ? 'block' : 'none';
+  document.getElementById('file-restore-panel').style.display = which === 'restore' ? 'block' : 'none';
+}
+function setMsgTab(which) {
+  document.querySelectorAll('[data-msg-tab]').forEach(t => t.classList.toggle('active', t.dataset.msgTab === which));
+  document.getElementById('msg-text-panel').style.display = which === 'text' ? 'block' : 'none';
+  document.getElementById('msg-file-panel').style.display = which === 'file' ? 'block' : 'none';
+  recomputeCapacity();
+}
+
+/* ===================== STEP 0 — file <-> encrypted text ================== */
+
+let f0File = null;
+async function onF0FileChosen(evt) {
+  f0File = evt.target.files[0] || null;
+  if (f0File) {
+    document.getElementById('f0-file-name').textContent = f0File.name;
+    document.getElementById('f0-file-meta').textContent = (f0File.type || 'unknown type') + ' · ' + humanBytes(f0File.size);
+  }
+  clearStatus('f0-encrypt-status');
+}
+
+async function doF0Encrypt() {
+  clearStatus('f0-encrypt-status');
+  if (!f0File) return setStatus('f0-encrypt-status', 'err', 'Choose a file first.');
+  const password = document.getElementById('f0-password').value;
+  if (!password) return setStatus('f0-encrypt-status', 'err', 'Enter a password.');
+
+  try {
+    setStatus('f0-encrypt-status', 'info', 'Encrypting…');
+    const fileBytes = new Uint8Array(await readFileAsArrayBuffer(f0File));
+    const headerObj = { name: f0File.name, type: f0File.type || 'application/octet-stream' };
+    const headerBytes = new TextEncoder().encode(JSON.stringify(headerObj));
+    const payload = concatBytes(uint32ToBytes(headerBytes.length), headerBytes, fileBytes);
+    const encrypted = await encryptBytes(payload, password);
+    const b64 = bytesToBase64(encrypted);
+    const outName = f0File.name.replace(/\.[^/.]+$/, '') + '.base64.txt';
+    downloadBlob(new Blob([b64], { type: 'text/plain' }), outName);
+    setStatus('f0-encrypt-status', 'ok', 'Done — downloaded ' + outName + ' (' + humanBytes(b64.length) + ').');
+  } catch (e) {
+    setStatus('f0-encrypt-status', 'err', 'Encryption failed: ' + e.message);
+  }
+}
+
+let f0RestoreFile = null;
+function onF0RestoreChosen(evt) {
+  f0RestoreFile = evt.target.files[0] || null;
+  if (f0RestoreFile) {
+    document.getElementById('f0-restore-name').textContent = f0RestoreFile.name;
+    document.getElementById('f0-restore-meta').textContent = humanBytes(f0RestoreFile.size);
+  }
+  clearStatus('f0-restore-status');
+}
+
+async function doF0Restore() {
+  clearStatus('f0-restore-status');
+  if (!f0RestoreFile) return setStatus('f0-restore-status', 'err', 'Choose a .base64.txt file first.');
+  const password = document.getElementById('f0-restore-password').value;
+  if (!password) return setStatus('f0-restore-status', 'err', 'Enter the password.');
+
+  try {
+    setStatus('f0-restore-status', 'info', 'Decrypting…');
+    const b64 = (await readFileAsText(f0RestoreFile)).trim();
+    const encrypted = base64ToBytes(b64);
+    const payload = await decryptBytes(encrypted, password);
+    const headerLen = bytesToUint32(payload, 0);
+    const headerBytes = payload.slice(4, 4 + headerLen);
+    const header = JSON.parse(new TextDecoder().decode(headerBytes));
+    const fileBytes = payload.slice(4 + headerLen);
+    downloadBlob(new Blob([fileBytes], { type: header.type }), header.name);
+    setStatus('f0-restore-status', 'ok', 'Done — downloaded ' + header.name + ' (' + humanBytes(fileBytes.length) + ').');
+  } catch (e) {
+    setStatus('f0-restore-status', 'err', 'Could not restore the file — wrong password, or the file is not a valid encrypted export.');
+  }
+}
+
+/* ===================== STEP 1 — hide message in image ===================== */
+
+let hImageBytes = null;   // raw ArrayBuffer bytes of the chosen cover image
+let hImageMime = null;
+let hImageWidth = 0, hImageHeight = 0;
+let hMessageFileText = null; // set when "use a text file" tab has a file loaded
+
+async function onHideImageChosen(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  document.getElementById('h-image-name').textContent = file.name;
+  document.getElementById('h-image-meta').textContent = file.type + ' · ' + humanBytes(file.size);
+  hImageMime = file.type || 'image/jpeg';
+  hImageBytes = new Uint8Array(await readFileAsArrayBuffer(file));
+
+  try {
+    const img = await loadImageFromBytes(hImageBytes, hImageMime);
+    hImageWidth = img.naturalWidth;
+    hImageHeight = img.naturalHeight;
+    const preview = document.getElementById('h-image-preview');
+    preview.src = URL.createObjectURL(new Blob([hImageBytes], { type: hImageMime }));
+    preview.style.display = 'block';
+  } catch (e) {
+    hImageWidth = hImageHeight = 0;
+    setStatus('h-status', 'err', 'Could not read this image.');
+  }
+  recomputeCapacity();
+}
+
+function onHideMessageFileChosen(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  document.getElementById('h-message-file-name').textContent = file.name;
+  document.getElementById('h-message-file-meta').textContent = humanBytes(file.size);
+  readFileAsText(file).then(text => {
+    hMessageFileText = text;
+    recomputeCapacity();
+  });
+}
+
+function currentMessageBytes() {
+  const usingFile = document.querySelector('[data-msg-tab].active').dataset.msgTab === 'file';
+  const text = usingFile ? (hMessageFileText || '') : document.getElementById('h-message-text').value;
+  return new TextEncoder().encode(text);
+}
+
+function recomputeCapacity() {
+  const bits = parseInt(document.getElementById('h-bits').value, 10);
+  const messageBytes = currentMessageBytes();
+  const overflowAllowed = document.getElementById('h-overflow').checked;
+
+  // Encrypted+base64 size only depends on plaintext length: AES-GCM adds a fixed
+  // 12-byte IV + 16-byte auth tag (28 bytes), then base64 inflates by 4/3.
+  const encryptedLen = messageBytes.length > 0 ? messageBytes.length + 28 : 0;
+  const embeddedLen = encryptedLen > 0 ? Math.ceil(encryptedLen / 3) * 4 : 0;
+  const headerSize = 8;
+
+  let capacity = 0;
+  if (bits > 0 && hImageWidth && hImageHeight) {
+    capacity = Math.max(0, pixelCapacityBytes(hImageWidth * hImageHeight, bits) - headerSize);
+  }
+
+  const fill = document.getElementById('h-meter-fill');
+  const text = document.getElementById('h-meter-text');
+  const tag = document.getElementById('h-overflow-tag');
+  const genBtn = document.getElementById('h-generate-btn');
+
+  if (bits === 0) {
+    text.textContent = embeddedLen + ' bytes → appended after file (no pixel capacity used)';
+    fill.style.width = '0%';
+    fill.className = 'meter-fill';
+    tag.style.display = 'none';
+    genBtn.disabled = embeddedLen === 0 || !hImageBytes;
+    return;
+  }
+
+  const pct = capacity > 0 ? Math.min(100, (embeddedLen / capacity) * 100) : (embeddedLen > 0 ? 100 : 0);
+  fill.style.width = pct + '%';
+  text.textContent = embeddedLen + ' / ' + capacity + ' bytes (pixel capacity)';
+
+  if (embeddedLen <= capacity) {
+    fill.className = 'meter-fill';
+    tag.style.display = 'none';
+    genBtn.disabled = embeddedLen === 0 || !hImageBytes;
+  } else if (overflowAllowed) {
+    fill.className = 'meter-fill warn';
+    const overBy = embeddedLen - capacity;
+    tag.style.display = 'block';
+    tag.textContent = humanBytes(overBy) + ' will be appended after the image file.';
+    genBtn.disabled = !hImageBytes;
+  } else {
+    fill.className = 'meter-fill over';
+    tag.style.display = 'block';
+    tag.textContent = 'Message is too large for this image at ' + bits + ' bit(s)/channel — increase bits, shorten the message, or enable the overflow checkbox.';
+    genBtn.disabled = true;
+  }
+}
+
+document.getElementById('h-bits').addEventListener('change', () => {
+  const bits = parseInt(document.getElementById('h-bits').value, 10);
+  const hint = document.getElementById('h-bits-hint');
+  if (bits === 0) {
+    hint.textContent = 'The image file itself is left completely untouched (byte-for-byte identical); the whole hidden message is appended after it.';
+  } else {
+    hint.textContent = 'Higher values hide more data per pixel but risk faint visible noise. Output is saved as PNG so the hidden bits survive (JPEG re-compression would destroy them).';
+  }
+});
+
+async function doHide() {
+  clearStatus('h-status');
+  document.getElementById('h-result-actions').innerHTML = '';
+  document.getElementById('h-result-actions').style.display = 'none';
+
+  if (!hImageBytes) return setStatus('h-status', 'err', 'Choose a cover image first.');
+  const password = document.getElementById('h-password').value;
+  if (!password) return setStatus('h-status', 'err', 'Enter a password for the message.');
+  const messageBytes = currentMessageBytes();
+  if (messageBytes.length === 0) return setStatus('h-status', 'err', 'Type a message or choose a text file.');
+
+  const bits = parseInt(document.getElementById('h-bits').value, 10);
+  const overflowAllowed = document.getElementById('h-overflow').checked;
+
+  try {
+    setStatus('h-status', 'info', 'Encrypting and embedding…');
+    const encrypted = await encryptBytes(messageBytes, password);
+    const b64 = bytesToBase64(encrypted);
+    const payloadBytes = new TextEncoder().encode(b64);
+
+    let finalBytes, outName, outMime;
+
+    if (bits === 0) {
+      finalBytes = concatBytes(hImageBytes, uint32ToBytes(payloadBytes.length), payloadBytes);
+      outName = 'hidden-message' + (hImageMime === 'image/png' ? '.png' : '.jpg');
+      outMime = hImageMime;
+    } else {
+      const img = await loadImageFromBytes(hImageBytes, hImageMime);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const headerSize = 8;
+      const capacity = Math.max(0, pixelCapacityBytes(canvas.width * canvas.height, bits) - headerSize);
+      let inImageLength = payloadBytes.length;
+      let remainder = null;
+      if (payloadBytes.length > capacity) {
+        if (!overflowAllowed) throw new Error('Message is too large for this image at this bits-per-channel setting.');
+        inImageLength = capacity;
+        remainder = payloadBytes.slice(capacity);
+      }
+
+      const header = concatBytes(uint32ToBytes(payloadBytes.length), uint32ToBytes(inImageLength));
+      const toEmbed = concatBytes(header, payloadBytes.slice(0, inImageLength));
+      embedLSB(imageData.data, bits, toEmbed);
+      ctx.putImageData(imageData, 0, 0);
+
+      const pngBlob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+      const pngBytes = new Uint8Array(await pngBlob.arrayBuffer());
+      finalBytes = remainder ? concatBytes(pngBytes, uint32ToBytes(remainder.length), remainder) : pngBytes;
+      outName = 'hidden-message.png';
+      outMime = 'image/png';
+    }
+
+    const blob = new Blob([finalBytes], { type: outMime });
+    downloadBlob(blob, outName);
+
+    const actions = document.getElementById('h-result-actions');
+    actions.style.display = 'flex';
+    const link = document.createElement('a');
+    link.className = 'download';
+    link.textContent = 'Download again — ' + outName;
+    link.href = URL.createObjectURL(blob);
+    link.download = outName;
+    actions.appendChild(link);
+
+    const note = bits === 0
+      ? 'The original file was kept byte-for-byte identical; your message is invisibly appended at the end.'
+      : 'Saved as PNG (lossless) so the hidden bits survive — a JPEG re-save would have destroyed them.';
+    setStatus('h-status', 'ok', 'Done — ' + humanBytes(blob.size) + ' total. ' + note);
+  } catch (e) {
+    setStatus('h-status', 'err', e.message);
+  }
+}
+
+/* ===================== STEP 2 — reveal message from image ================== */
+
+async function doReveal() {
+  clearStatus('r-status');
+  document.getElementById('r-output-field').style.display = 'none';
+
+  const fileInput = document.getElementById('r-image-input');
+  const file = fileInput.files[0];
+  if (!file) return setStatus('r-status', 'err', 'Choose an image first.');
+  const password = document.getElementById('r-password').value;
+  if (!password) return setStatus('r-status', 'err', 'Enter the password.');
+  const bits = parseInt(document.getElementById('r-bits').value, 10);
+
+  try {
+    setStatus('r-status', 'info', 'Reading image…');
+    const rawBytes = new Uint8Array(await readFileAsArrayBuffer(file));
+    let payloadBytes;
+
+    if (bits === 0) {
+      const boundary = findContainerBoundary(rawBytes);
+      if (boundary === -1) throw new Error('Could not find the end of the image data in this file.');
+      const len = bytesToUint32(rawBytes, boundary);
+      if (boundary + 4 + len > rawBytes.length) throw new Error('No appended hidden data found in this file.');
+      payloadBytes = rawBytes.slice(boundary + 4, boundary + 4 + len);
+    } else {
+      const img = await loadImageFromBytes(rawBytes, file.type);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const headerBytes = extractLSB(imageData.data, bits, 8);
+      const totalLength = bytesToUint32(headerBytes, 0);
+      const inImageLength = bytesToUint32(headerBytes, 4);
+      const rawAll = extractLSB(imageData.data, bits, 8 + inImageLength);
+      const embeddedPart = rawAll.slice(8);
+
+      if (totalLength > inImageLength) {
+        const boundary = findContainerBoundary(rawBytes);
+        if (boundary === -1) throw new Error('Expected extra appended data but could not locate it.');
+        const remLen = bytesToUint32(rawBytes, boundary);
+        const remData = rawBytes.slice(boundary + 4, boundary + 4 + remLen);
+        payloadBytes = concatBytes(embeddedPart, remData);
+      } else {
+        payloadBytes = embeddedPart;
+      }
+    }
+
+    setStatus('r-status', 'info', 'Decrypting…');
+    const b64 = new TextDecoder().decode(payloadBytes);
+    const encrypted = base64ToBytes(b64);
+    const plain = await decryptBytes(encrypted, password);
+    const message = new TextDecoder().decode(plain);
+
+    document.getElementById('r-output').value = message;
+    document.getElementById('r-output-field').style.display = 'block';
+    const dl = document.getElementById('r-download-link');
+    dl.style.display = 'inline-block';
+    dl.href = URL.createObjectURL(new Blob([message], { type: 'text/plain' }));
+    dl.download = 'revealed-message.txt';
+
+    setStatus('r-status', 'ok', 'Message revealed successfully.');
+  } catch (e) {
+    setStatus('r-status', 'err', 'Could not reveal a message — wrong password, wrong bits-per-channel setting, or no hidden data in this file.');
+  }
+}
+
+/* initial capacity paint */
+recomputeCapacity();
+</script>
+
+</body>
+</html>
