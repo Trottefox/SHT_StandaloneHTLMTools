@@ -35,3 +35,6 @@ merge, split, organize, rotate, compress, transform to word, edit, sign, waterma
 
 # SHT_Anamorphic_Image_Projector
 Projects an image to make it seen from a certain angle (for 3D effect)
+
+# SHT_Image_as_communication_vector
+Allows to use encryption and simple steganography to embedd a message into an image.
