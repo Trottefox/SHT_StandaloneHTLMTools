@@ -10,6 +10,13 @@ Those tools were vibe-coded with Claude, and are associated to this license : ht
 A tool for teachers made for making simple flashcards as memory reactivator for students.
 Students can also use it on their own for example to review vocabulary as it can allow to be loaded with a csv importation
 
+# SHT_Memory_flashcards : 
+A tool for teachers made for making simple flashcards as memory reactivator for students.
+Students can also use it on their own for example to review vocabulary as it can allow to be loaded with a csv importation
+
+# SHT_Memory_flashcards_MathJax.html :
+An enhanced version of SHT_Memory_flashcards allowing to export and use a csv database / use mathjax expressions for the maths teachers
+
 # SHT_OCR_Image2text(fully disconnected) : 
 A tool to identify the text on a photo, heavy but totally disconnected. Relies on tesseract.
 # SHT_OCR_Image2text(light connects once) : 
