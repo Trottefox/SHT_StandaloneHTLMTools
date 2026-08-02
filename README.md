@@ -6,14 +6,9 @@ Just download it, then use it.
 
 Those tools were vibe-coded with Claude, and are associated to this license : https://creativecommons.org/licenses/by-nc/4.0/deed.fr
 
-# SHT_Memory_flashcards : 
-A tool for teachers made for making simple flashcards as memory reactivator for students.
-Students can also use it on their own for example to review vocabulary as it can allow to be loaded with a csv importation
-
 # SHT_Memory_flashcards.html :
 A tool for teachers made for making simple flashcards as memory reactivator for students allowing to export and use a csv database / use mathjax expressions for the maths teachers
 Students can also use it on their own for example to review vocabulary as it can allow to be loaded with a csv importation
-
 # SHT_QCM_Builder.html :
 A tool for teachers made for making QCM for students allowing to export and use a csv database / use mathjax expressions for the maths teachers
 
